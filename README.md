@@ -37,4 +37,4 @@ Currently, you can implement two methods in your plugin:
 
 * `MyPlugin.attach_to_gui(gui)`: This is called when you attach that plugin to a `GUI` instance (i.e. when you do `gui.attach('MyPlugin')`. In that function, you can add views, create actions, and do anything you want on the GUI. This allows you to create independent components for GUIs.
 
-By implementing two commands, you can create a custom subcommand `phy mysubcommand arg1 --option1=value1` that launches a custom GUI.
+By implementing two methods, you can create a custom subcommand `phy mysubcommand arg1 --option1=value1` that launches a custom GUI.
