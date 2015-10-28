@@ -13,7 +13,7 @@ from numpy.testing import assert_array_equal as ae
 from numpy.testing import assert_allclose as ac
 from pytest import raises
 
-from ...h5 import open_h5
+from ..h5 import open_h5
 from ..creator import KwikCreator, _write_by_chunk, create_kwik
 from ..mock import (artificial_spike_samples,
                     artificial_features,
