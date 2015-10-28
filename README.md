@@ -1,5 +1,9 @@
 # phy-contrib
 
+[![Build Status](https://img.shields.io/travis/kwikteam/phy-contrib.svg)](https://travis-ci.org/kwikteam/phy-contrib)
+[![codecov.io](https://img.shields.io/codecov/c/github/kwikteam/phy-contrib.svg)](http://codecov.io/github/kwikteam/phy-contrib?branch=master)
+[![PyPI release](https://img.shields.io/pypi/v/phy-contrib.svg)](https://pypi.python.org/pypi/phy-contrib)
+
 Community-contributed set of plugins for phy
 
 ## Easy install

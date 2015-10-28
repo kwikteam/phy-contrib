@@ -26,5 +26,7 @@ class KwikGUIPlugin(IPlugin):
         def cluster_manual(path):
             create_app()
             gui = KwikGUI(path)
+            # TODO: load plugins with attach_to_gui(gui, ctx)
+
             gui.show()
             run_app()
