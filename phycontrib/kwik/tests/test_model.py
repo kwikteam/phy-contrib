@@ -12,8 +12,8 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
-from ....electrode.mea import MEA, staggered_positions
-from ....utils.logging import StringLogger, register, unregister
+from phy.electrode.mea import MEA, staggered_positions
+from phy.utils.testing import captured_logging
 from ..model import (KwikModel,
                      _list_channel_groups,
                      _list_channels,
@@ -204,13 +204,12 @@ def test_kwik_open_no_kwd(tempdir):
 
     # Test implicit open() method.
     kwik = KwikModel(filename)
-    l = StringLogger(level='debug')
-    register(l)
-    kwik.waveforms[:]
+    with captured_logging() as buf:
+        kwik.waveforms[:]
+
     # Enusure that there is no error message.
-    assert not str(l).strip()
+    assert not buf.getvalue().strip()
     kwik.close()
-    unregister(l)
 
 
 def test_kwik_save(tempdir):

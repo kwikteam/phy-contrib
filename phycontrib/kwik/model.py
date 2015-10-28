@@ -666,19 +666,19 @@ class KwikModel(object):
         if self._metadata.get('waveform_filter', True):
             logger.debug("Enable waveform filter.")
 
-            def filter(x):
-                return apply_filter(x, b_filter)
+            def the_filter(x, axis=0):
+                return apply_filter(x, b_filter, axis=axis)
 
             filter_margin = order * 3
         else:
             logger.debug("Disable waveform filter.")
-            filter = None
+            the_filter = None
             filter_margin = 0
 
         dc_offset = self._metadata.get('waveform_dc_offset', None)
         scale_factor = self._metadata.get('waveform_scale_factor', None)
-        self._waveform_loader = WaveformLoader(n_samples=n_samples,
-                                               filter=filter,
+        self._waveform_loader = WaveformLoader(n_samples_waveforms=n_samples,
+                                               filter=the_filter,
                                                filter_margin=filter_margin,
                                                dc_offset=dc_offset,
                                                scale_factor=scale_factor,
