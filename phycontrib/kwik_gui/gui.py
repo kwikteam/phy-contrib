@@ -49,9 +49,6 @@ class KwikGUI(GUI):
         # Initialize the GUI.
         super(KwikGUI, self).__init__()
 
-        # Initialize the actions.
-        self.actions = Actions(self)
-
         # Load the Kwik dataset.
         self.path = path
         self.model = KwikModel(path)
@@ -60,6 +57,7 @@ class KwikGUI(GUI):
                               cluster_groups=self.model.cluster_groups,
                               n_spikes_max_per_cluster=100,  # TODO
                               )
+        mc.attach(self)
 
         # Create the context to pass to the plugins in `attach_to_gui()`.
         ctx = {
