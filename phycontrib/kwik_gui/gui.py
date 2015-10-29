@@ -56,9 +56,16 @@ class KwikGUI(GUI):
         self.path = path
         self.model = KwikModel(path)
 
+        mc = ManualClustering(self.model.spike_clusters,
+                              cluster_groups=self.model.cluster_groups,
+                              n_spikes_max_per_cluster=100,  # TODO
+                              )
+
         # Create the context to pass to the plugins in `attach_to_gui()`.
         ctx = {
             'path': path,
+            'model': self.model,
+            'manual_clustering': mc,
         }
 
         # Attach the specified plugins.
