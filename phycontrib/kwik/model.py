@@ -287,7 +287,7 @@ def _dat_to_traces(dat_path, n_channels, dtype):
                                n_channels=n_channels,
                                dtype=dtype,
                                )
-    return np.fromfile(dat_path, dtype=dtype, shape=(n_samples, n_channels))
+    return np.memmap(dat_path, dtype=dtype, shape=(n_samples, n_channels))
 
 
 #------------------------------------------------------------------------------
@@ -930,7 +930,7 @@ class KwikModel(object):
             raise ValueError("No kwik_path specified.")
 
         if not kwik_path.endswith('.kwik'):
-            raise ValueError("File does not end in .kwik")
+            raise ValueError("File does not end in .kwik.")
 
         # Open the file.
         kwik_path = op.realpath(kwik_path)
