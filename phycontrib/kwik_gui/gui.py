@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+
+"""Kwik GUI."""
+
+
+#------------------------------------------------------------------------------
+# Imports
+#------------------------------------------------------------------------------
 
 # import sys
 
@@ -9,8 +17,13 @@ from phy import IPlugin
 from phy.gui import GUI, create_app, run_app
 
 
+#------------------------------------------------------------------------------
+# Kwik GUI
+#------------------------------------------------------------------------------
+
 class KwikGUI(GUI):
     def __init__(self, path):
+        super(KwikGUI, self).__init__()
         self.path = path
         # TODO: load plugins with attach_to_gui(gui, ctx)
         # model = KwikModel(path)
@@ -19,7 +32,13 @@ class KwikGUI(GUI):
         # attach_plugins(gui, plugins)
 
 
+#------------------------------------------------------------------------------
+# Kwik GUI plugin
+#------------------------------------------------------------------------------
+
 class KwikGUIPlugin(IPlugin):
+    """Create the `phy cluster-manual` command for Kwik files."""
+
     def attach_to_cli(self, cli):
 
         # Create the `phy cluster-manual file.kwik` command.
