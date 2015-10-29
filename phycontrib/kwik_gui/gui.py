@@ -74,6 +74,7 @@ class KwikGUI(GUI):
                          masks=self.model.masks,
                          spike_clusters=self.model.spike_clusters,
                          channel_positions=self.model.probe.positions,
+                         keys=None,  # disable Escape shortcut in the view
                          )
         w.attach(self)
 
@@ -113,3 +114,7 @@ class KwikGUIPlugin(IPlugin):
 
             # Start the Qt event loop.
             run_app()
+
+            # Close the GUI.
+            gui.close()
+            del gui
