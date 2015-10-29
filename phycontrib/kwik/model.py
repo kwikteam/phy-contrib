@@ -983,6 +983,8 @@ class KwikModel(object):
         # No need to keep the kwik file open.
         self._kwik.close()
 
+        logger.info("Kwik file `%s` loaded.", self.kwik_path)
+
     def save(self, spike_clusters, cluster_groups, clustering_metadata=None):
         """Save the spike clusters and cluster groups in the Kwik file."""
 
