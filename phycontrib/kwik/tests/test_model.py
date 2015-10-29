@@ -20,6 +20,7 @@ from ..model import (KwikModel,
                      _list_recordings,
                      _list_clusterings,
                      _concatenate_spikes,
+                     cluster_group_id,
                      )
 from ..mock import create_mock_kwik
 from ..creator import create_kwik
@@ -163,9 +164,10 @@ def test_kwik_open_full(tempdir):
     # Test cluster groups.
     for cluster in range(_N_CLUSTERS):
         print(cluster)
-        assert kwik.cluster_metadata.group(cluster) == min(cluster, 3)
+        assert cluster_group_id(kwik.cluster_metadata.group(cluster)) == \
+            min(cluster, 3)
     for cluster, group in kwik.cluster_groups.items():
-        assert group == min(cluster, 3)
+        assert cluster_group_id(group) == min(cluster, 3)
 
     # Test probe.
     assert isinstance(kwik.probe, MEA)
@@ -230,19 +232,19 @@ def test_kwik_save(tempdir):
     sc_1 = sc_0.copy()
     new_cluster = _N_CLUSTERS + 10
     sc_1[_N_SPIKES // 2:] = new_cluster
-    cluster_groups[new_cluster] = 7
+    cluster_groups[new_cluster] = 'new'
     ae(kwik.spike_clusters, sc_0)
 
     assert kwik.cluster_metadata.group(new_cluster) == 3
     kwik.save(sc_1, cluster_groups, {'test': (1, 2.)})
     ae(kwik.spike_clusters, sc_1)
-    assert kwik.cluster_metadata.group(new_cluster) == 7
+    assert kwik.cluster_metadata.group(new_cluster) == 'new'
 
     kwik.close()
 
     kwik = KwikModel(filename)
     ae(kwik.spike_clusters, sc_1)
-    assert kwik.cluster_metadata.group(new_cluster) == 7
+    assert kwik.cluster_metadata.group(new_cluster) == 'new'
     ae(kwik.clustering_metadata['test'], [1, 2])
 
 
@@ -262,7 +264,7 @@ def test_kwik_clusterings(tempdir):
     # The default clustering is 'main'.
     assert kwik.n_spikes == _N_SPIKES
     assert kwik.n_clusters == _N_CLUSTERS
-    assert kwik.cluster_groups[_N_CLUSTERS - 1] == 3
+    assert kwik.cluster_groups[_N_CLUSTERS - 1] == 'unsorted'
     ae(kwik.cluster_ids, np.arange(_N_CLUSTERS))
 
     # Change clustering.
@@ -271,7 +273,7 @@ def test_kwik_clusterings(tempdir):
     assert kwik.n_spikes == _N_SPIKES
     # Some clusters may be empty with a small number of spikes like here
     assert _N_CLUSTERS * 2 - 4 <= n_clu <= _N_CLUSTERS * 2
-    assert kwik.cluster_groups[n_clu - 1] == 3
+    assert kwik.cluster_groups[n_clu - 1] == 'unsorted'
     assert len(kwik.cluster_ids) == n_clu
 
 
@@ -306,7 +308,7 @@ def test_kwik_manage_clusterings(tempdir):
     kwik.clustering = 'original_2'
     n_clu = kwik.n_clusters
     if (n_clu - 1) in kwik.cluster_groups:
-        assert kwik.cluster_groups[n_clu - 1] == 3
+        assert kwik.cluster_groups[n_clu - 1] == 'unsorted'
     assert len(kwik.cluster_ids) == n_clu
 
     # Test copy.
@@ -352,8 +354,8 @@ def test_kwik_manage_clusterings(tempdir):
     ae(kwik.spike_clusters, sc)
     assert kwik.n_clusters == 2
     ae(kwik.cluster_ids, [1, 3])
-    assert kwik.cluster_groups == {1: 3,
-                                   3: 3}
+    assert kwik.cluster_groups == {1: 'unsorted',
+                                   3: 'unsorted'}
 
 
 def test_kwik_manage_cluster_groups(tempdir):

@@ -13,6 +13,7 @@ import os
 import logging
 import numpy as np
 import six
+from six import string_types
 
 from .h5 import open_h5, File
 from phy.cluster.manual import ClusterMeta
@@ -528,14 +529,6 @@ _DEFAULT_GROUPS = [(0, 'Noise'),
                    ]
 
 
-"""Metadata fields that must be provided when creating the Kwik file."""
-_mandatory_metadata_fields = ('dtype',
-                              'n_channels',
-                              'prb_file',
-                              'raw_data_files',
-                              )
-
-
 def cluster_group_id(name_or_id):
     """Return the id of a cluster group from its name."""
     if isinstance(name_or_id, six.string_types):
@@ -814,14 +807,27 @@ class KwikModel(object):
     def _load_cluster_groups(self):
         clusters = self._kwik.groups(self._clustering_path)
         clusters = [int(cluster) for cluster in clusters]
+        # NOTE: mapping group_number => group name
+        mapping = dict(_DEFAULT_GROUPS)
         for cluster in clusters:
             path = self._cluster_path(cluster)
             group = self._kwik.read_attr(path, 'cluster_group')
+            # Get the group name.
+            group = mapping.get(group, group)
+            assert group is None or isinstance(group, string_types)
+            if group:
+                group = group.lower()
             self._cluster_metadata.set('group', [cluster], group, False)
 
     def _save_cluster_groups(self, cluster_groups):
         assert isinstance(cluster_groups, dict)
+        # NOTE: mapping group name ==> group_number
+        mapping = dict(_DEFAULT_GROUPS)
+        mapping = {a: b for b, a in mapping.items()}
         for cluster, group in cluster_groups.items():
+            # Get the group index, or the name (new group).
+            assert group is None or isinstance(group, string_types)
+            group = mapping.get(group, group)
             path = self._cluster_path(cluster)
             self._kwik.write_attr(path, 'cluster_group', group)
             self._cluster_metadata.set('group', [cluster], group, False)
