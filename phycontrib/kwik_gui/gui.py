@@ -12,7 +12,7 @@ from phy.gui import GUI, create_app, run_app
 class KwikGUI(GUI):
     def __init__(self, path):
         self.path = path
-        # TODO
+        # TODO: load plugins with attach_to_gui(gui, ctx)
         # model = KwikModel(path)
         # config = load_master_config()
         # plugins = config.KwikGUI.plugins
@@ -21,12 +21,12 @@ class KwikGUI(GUI):
 
 class KwikGUIPlugin(IPlugin):
     def attach_to_cli(self, cli):
+
+        # Create the `phy cluster-manual file.kwik` command.
         @cli.command('cluster-manual')
         @click.argument('path', type=click.Path(exists=True))
         def cluster_manual(path):
             create_app()
             gui = KwikGUI(path)
-            # TODO: load plugins with attach_to_gui(gui, ctx)
-
             gui.show()
             run_app()
