@@ -8,6 +8,7 @@
 #------------------------------------------------------------------------------
 
 import logging
+import os.path as op
 
 import click
 import numpy as np
@@ -16,6 +17,7 @@ from phy import IPlugin, get_plugin, load_master_config
 from phy.cluster.manual import ManualClustering, WaveformView
 from phy.gui import GUI, create_app, run_app
 from phy.io.array import select_spikes
+from phy.io.context import Context
 from phy.stats.clusters import mean, max_waveform_amplitude
 
 from phycontrib.kwik import KwikModel
@@ -61,8 +63,10 @@ class KwikGUI(GUI):
         super(KwikGUI, self).__init__()
 
         # Load the Kwik dataset.
-        self.path = path
+        self.path = op.realpath(op.expanduser(path))
         self.model = KwikModel(path)
+
+        ctx = Context(op.join(op.dirname(self.path), '.phy/'))
 
         # Attach the manual clustering logic (wizard, merge, split,
         # undo stack) to the GUI.
@@ -75,6 +79,7 @@ class KwikGUI(GUI):
         spc = self.model.spikes_per_cluster
 
         @mc.wizard.set_quality_function
+        @ctx.cache
         def quality(cluster):
             spike_ids = select_spikes(cluster_ids=[cluster],
                                       max_n_spikes_per_cluster=100,
@@ -84,7 +89,10 @@ class KwikGUI(GUI):
             waveforms = np.atleast_3d(self.model.waveforms[spike_ids])
             mean_masks = mean(masks)
             mean_waveforms = mean(waveforms)
-            return max_waveform_amplitude(mean_masks, mean_waveforms)
+            q = max_waveform_amplitude(mean_masks, mean_waveforms)
+            logger.debug("Computed cluster quality for %d: %.3f.",
+                         cluster, q)
+            return q
 
         # Create the waveform view.
         w = WaveformView(waveforms=self.model.waveforms,
