@@ -18,7 +18,10 @@ from phy.cluster.manual import ManualClustering, WaveformView
 from phy.gui import GUI, create_app, run_app
 from phy.io.array import select_spikes
 from phy.io.context import Context
-from phy.stats.clusters import mean, max_waveform_amplitude
+from phy.stats.clusters import (mean,
+                                max_waveform_amplitude,
+                                mean_masked_features_distance,
+                                )
 
 from phycontrib.kwik import KwikModel
 
@@ -77,10 +80,11 @@ class KwikGUI(GUI):
         mc.attach(self)
 
         spc = self.model.spikes_per_cluster
+        nfc = self.model.n_features_per_channel
 
         @mc.wizard.set_quality_function
         @ctx.cache
-        def quality(cluster):
+        def max_waveform_amplitude_quality(cluster):
             spike_ids = select_spikes(cluster_ids=[cluster],
                                       max_n_spikes_per_cluster=100,
                                       spikes_per_cluster=spc,
@@ -93,6 +97,41 @@ class KwikGUI(GUI):
             logger.debug("Computed cluster quality for %d: %.3f.",
                          cluster, q)
             return q
+
+        @mc.wizard.set_similarity_function
+        @ctx.cache
+        def mean_masked_features_similarity(c0, c1):
+            s0 = select_spikes(cluster_ids=[c0],
+                               max_n_spikes_per_cluster=100,
+                               spikes_per_cluster=spc,
+                               )
+            s1 = select_spikes(cluster_ids=[c1],
+                               max_n_spikes_per_cluster=100,
+                               spikes_per_cluster=spc,
+                               )
+
+            # s = np.hstack((s0, s1))
+            # n = len(s0)
+
+            f0 = self.model.features[s0]
+            m0 = np.atleast_2d(self.model.masks[s0])
+
+            f1 = self.model.features[s1]
+            m1 = np.atleast_2d(self.model.masks[s1])
+
+            mf0 = mean(f0)
+            mm0 = mean(m0)
+
+            mf1 = mean(f1)
+            mm1 = mean(m1)
+
+            d = mean_masked_features_distance(mf0, mf1, mm0, mm1,
+                                              n_features_per_channel=nfc,
+                                              )
+
+            logger.debug("Computed cluster similarity for (%d, %d): %.3f.",
+                         c0, c1, d)
+            return -d  # NOTE: convert distance to score
 
         # Create the waveform view.
         w = WaveformView(waveforms=self.model.waveforms,
