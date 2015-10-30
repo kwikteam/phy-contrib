@@ -1060,7 +1060,7 @@ class KwikModel(object):
 
         # Recalculate spikes_per_cluster manually
         self._spikes_per_cluster = \
-            _spikes_per_cluster(self.spike_ids, self._spike_clusters)
+            _spikes_per_cluster(self._spike_clusters, spike_ids=self.spike_ids)
 
         if _to_close:
             self._kwik.close()
@@ -1454,7 +1454,8 @@ class KwikModel(object):
                 self._spikes_per_cluster = {0: self.spike_ids}
             else:
                 self._spikes_per_cluster = \
-                    _spikes_per_cluster(self.spike_ids, self._spike_clusters)
+                    _spikes_per_cluster(self._spike_clusters,
+                                        spike_ids=self.spike_ids)
         return self._spikes_per_cluster
 
     def spike_train(self, cluster_id):
