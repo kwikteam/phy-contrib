@@ -10,10 +10,13 @@
 import logging
 
 import click
+import numpy as np
 
 from phy import IPlugin, get_plugin, load_master_config
 from phy.cluster.manual import ManualClustering, WaveformView
 from phy.gui import GUI, create_app, run_app
+from phy.io.array import select_spikes
+from phy.stats.clusters import mean, max_waveform_amplitude
 
 from phycontrib.kwik import KwikModel
 
@@ -69,6 +72,20 @@ class KwikGUI(GUI):
                               )
         mc.attach(self)
 
+        spc = self.model.spikes_per_cluster
+
+        @mc.wizard.set_quality_function
+        def quality(cluster):
+            spike_ids = select_spikes(cluster_ids=[cluster],
+                                      max_n_spikes_per_cluster=100,
+                                      spikes_per_cluster=spc,
+                                      )
+            masks = np.atleast_2d(self.model.masks[spike_ids])
+            waveforms = np.atleast_3d(self.model.waveforms[spike_ids])
+            mean_masks = mean(masks)
+            mean_waveforms = mean(waveforms)
+            return max_waveform_amplitude(mean_masks, mean_waveforms)
+
         # Create the waveform view.
         w = WaveformView(waveforms=self.model.waveforms,
                          masks=self.model.masks,
@@ -87,6 +104,9 @@ class KwikGUI(GUI):
 
         # Attach the specified plugins.
         attach_plugins(self, plugins, ctx)
+
+        # mc.select(2, 3, 5, 6, 7, 8)
+        mc.wizard.restart()
 
 
 #------------------------------------------------------------------------------
