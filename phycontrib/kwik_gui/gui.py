@@ -11,19 +11,13 @@ import logging
 import os.path as op
 
 import click
-import numpy as np
 
 from phy import IPlugin, get_plugin, load_master_config
 from phy.cluster.manual import (ManualClustering, WaveformView,
                                 default_wizard_functions,
                                 )
 from phy.gui import GUI, create_app, run_app
-from phy.io.array import select_spikes
 from phy.io.context import Context
-from phy.stats.clusters import (mean,
-                                max_waveform_amplitude,
-                                mean_masked_features_distance,
-                                )
 
 from phycontrib.kwik import KwikModel
 
