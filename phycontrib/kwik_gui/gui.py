@@ -12,11 +12,11 @@ import os.path as op
 
 import click
 
-from phy import IPlugin, get_plugin, load_master_config
+from phy import IPlugin
 from phy.cluster.manual import (ManualClustering, WaveformView,
                                 default_wizard_functions,
                                 )
-from phy.gui import GUI, create_app, run_app
+from phy.gui import GUI, create_app, run_app, load_gui_plugins
 from phy.io.context import Context
 from phy.utils import Bunch
 
@@ -28,32 +28,6 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 # Kwik GUI
 #------------------------------------------------------------------------------
-
-def attach_plugins(gui, plugins=None, session=None):
-    """Attach a list of plugins to a GUI.
-
-    By default, the list of plugins is taken from the `c.TheGUI.plugins`
-    parameter, where `TheGUI` is the name of the GUI class.
-
-    """
-    session = session or {}
-
-    # GUI name.
-    name = gui.__class__.__name__
-
-    # If no plugins are specified, load the master config and
-    # get the list of user plugins to attach to the GUI.
-    if plugins is None:
-        config = load_master_config()
-        plugins = config[name].plugins
-        if not isinstance(plugins, list):
-            plugins = []
-
-    # Attach the plugins to the GUI.
-    for plugin in plugins:
-        logger.info("Attach plugin `%s` to %s.", plugin, name)
-        get_plugin(plugin)().attach_to_gui(gui, session)
-
 
 class KwikGUI(GUI):
     """Manual clustering GUI working with Kwik datasets."""
@@ -107,7 +81,7 @@ class KwikGUI(GUI):
         })
 
         # Attach the specified plugins.
-        attach_plugins(self, plugins, session)
+        load_gui_plugins(self, plugins, session)
 
 
 #------------------------------------------------------------------------------
