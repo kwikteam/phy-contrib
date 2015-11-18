@@ -18,6 +18,7 @@ from phy.cluster.manual import (ManualClustering, WaveformView,
                                 )
 from phy.gui import GUI, create_app, run_app
 from phy.io.context import Context
+from phy.utils import Bunch
 
 from phycontrib.kwik import KwikModel
 
@@ -28,14 +29,14 @@ logger = logging.getLogger(__name__)
 # Kwik GUI
 #------------------------------------------------------------------------------
 
-def attach_plugins(gui, plugins=None, ctx=None):
+def attach_plugins(gui, plugins=None, session=None):
     """Attach a list of plugins to a GUI.
 
     By default, the list of plugins is taken from the `c.TheGUI.plugins`
     parameter, where `TheGUI` is the name of the GUI class.
 
     """
-    ctx = ctx or {}
+    session = session or {}
 
     # GUI name.
     name = gui.__class__.__name__
@@ -51,7 +52,7 @@ def attach_plugins(gui, plugins=None, ctx=None):
     # Attach the plugins to the GUI.
     for plugin in plugins:
         logger.info("Attach plugin `%s` to %s.", plugin, name)
-        get_plugin(plugin)().attach_to_gui(gui, ctx)
+        get_plugin(plugin)().attach_to_gui(gui, session)
 
 
 class KwikGUI(GUI):
@@ -98,14 +99,15 @@ class KwikGUI(GUI):
         w.attach(self)
 
         # Create the context to pass to the plugins in `attach_to_gui()`.
-        ctx = {
+        session = Bunch({
             'path': path,
             'model': self.model,
             'manual_clustering': mc,
-        }
+            'context': ctx,
+        })
 
         # Attach the specified plugins.
-        attach_plugins(self, plugins, ctx)
+        attach_plugins(self, plugins, session)
 
 
 #------------------------------------------------------------------------------
@@ -126,7 +128,7 @@ class KwikGUIPlugin(IPlugin):
             create_app()
 
             # Create the Kwik GUI.
-            gui = KwikGUI(path)
+            gui = KwikGUI(path, plugins=['SaveGUIState'])
 
             # Show the GUI.
             gui.show()
@@ -137,3 +139,21 @@ class KwikGUIPlugin(IPlugin):
             # Close the GUI.
             gui.close()
             del gui
+
+
+class SaveGUIState(IPlugin):
+    def attach_to_gui(self, gui, session):
+
+        gs_name = '{}/geometry_state'.format(gui.name)
+
+        @gui.connect_
+        def on_close():
+            gs = gui.save_geometry_state()
+            logger.debug("Save geometry state to %s.", gs_name)
+            session.context.save(gs_name, gs)
+
+        @gui.connect_
+        def on_show():
+            gs = session.context.load(gs_name)
+            logger.debug("Restore geometry state from %s.", gs_name)
+            gui.restore_geometry_state(gs)
