@@ -60,7 +60,8 @@ class KwikGUI(GUI):
                                         spikes_per_cluster=spc,
                                         )
 
-        mc.set_quality_func(ctx.cache(q))
+        mc.add_column(ctx.cache(q), name='quality')
+        mc.set_default_sort('quality')
         mc.set_similarity_func(ctx.cache(s))
 
         # Create the waveform view.
