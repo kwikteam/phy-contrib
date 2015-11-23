@@ -13,7 +13,9 @@ import os.path as op
 import click
 
 from phy import IPlugin
-from phy.cluster.manual import (ManualClustering, WaveformView,
+from phy.cluster.manual import (ManualClustering,
+                                WaveformView,
+                                CorrelogramView,
                                 default_wizard_functions,
                                 )
 from phy.gui import GUI, create_app, run_app, load_gui_plugins
@@ -72,6 +74,16 @@ class KwikGUI(GUI):
                          keys=None,  # disable Escape shortcut in the view
                          )
         w.attach(self)
+
+        # Create the waveform view.
+        ccg = CorrelogramView(spike_times=self.model.spike_times,
+                              spike_clusters=self.model.spike_clusters,
+                              sample_rate=self.model.sample_rate,
+                              bin_size=1e-3,
+                              window_size=50e-3,
+                              keys=None,  # disable Escape shortcut in the view
+                              )
+        ccg.attach(self)
 
         # Create the context to pass to the plugins in `attach_to_gui()`.
         session = Bunch({
