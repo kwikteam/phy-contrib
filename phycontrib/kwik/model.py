@@ -363,7 +363,7 @@ def _concatenate_spikes(spikes, recs, offsets):
     spikes = _as_array(spikes)
     offsets = _as_array(offsets)
     recs = _as_array(recs)
-    return (spikes + offsets[recs]).astype(np.uint64)
+    return (spikes + offsets[recs]).astype(np.int64)
 
 
 def _create_cluster_group(f, group_id, name,
@@ -792,12 +792,24 @@ class KwikModel(object):
                                                   self._spike_recordings,
                                                   self._recording_offsets)
 
-        if not np.all(np.diff(self._spike_samples.astype(np.int64)) >= 0):
+        if not np.all(np.diff(self._spike_samples) >= 0):
+            # NOTE: for an unknown reason, spike times are not
+            # always strictly increasing in Kwik files. Mostly, there is
+            # a difference of 1 sample, e.g. [..., 123456, 123455, 123490, ...]
+            # We try to fix this specific problem, otherwise we raise an
+            # error. The program makes the assumption that spike times
+            # are always increasing. Otherwise, the CCG computation may fail.
+            # There might be other issues as well.
             msg = "The spike times must be increasing. "
-            spk = np.nonzero(np.diff(self._spike_samples.astype(np.int64)) < 0)
+            spk = np.nonzero(np.diff(self._spike_samples) < 0)
             spk = spk[0]
             msg += "The spurious spike ids are: " + str(spk.tolist())
-            raise ValueError(msg)
+            logger.debug(msg)
+            logger.debug("Trying a quick hack to fix the problem.")
+            self._spike_samples[spk + 1] += 1
+            if not np.all(np.diff(self._spike_samples) >= 0):
+                logger.debug("The quick hack didn't work out, failing now.")
+                raise ValueError(msg)
 
     def _load_spike_clusters(self):
         self._spike_clusters = self._kwik.read(self._spike_clusters_path)[:]
@@ -887,7 +899,7 @@ class KwikModel(object):
         self._recording_offsets = []
         for trace in traces:
             self._recording_offsets.append(i)
-            i += trace.shape[0]
+            i += trace.shape[0] + 1
         self._traces = _concatenate_virtual_arrays(traces)
 
     def has_kwx(self):
@@ -1369,7 +1381,7 @@ class KwikModel(object):
     def spike_samples(self):
         """Spike samples from the current channel group.
 
-        This is a NumPy array containing `uint64` values (number of samples
+        This is a NumPy array containing `int64` values (number of samples
         in unit of the sample rate).
 
         The spike times of all recordings are concatenated. There is no gap

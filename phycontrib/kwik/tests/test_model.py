@@ -121,7 +121,7 @@ def test_kwik_open_full(tempdir):
     ae(kwik.channel_order, np.arange(1, _N_CHANNELS - 1)[::-1])
 
     assert kwik.spike_samples.shape == (_N_SPIKES,)
-    assert kwik.spike_samples.dtype == np.uint64
+    assert kwik.spike_samples.dtype == np.int64
 
     # Make sure the spike samples are increasing, even with multiple
     # recordings.
