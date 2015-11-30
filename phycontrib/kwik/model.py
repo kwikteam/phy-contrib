@@ -780,9 +780,24 @@ class KwikModel(object):
         _spikes = self._kwik.read(path)[:]
         self._spike_recordings = self._kwik.read(
             '{0:s}/recording'.format(self._spikes_path))[:]
+
+        # If the recording offsets have not been set, we need to create
+        # non-trivial ones to ensure that spike times are increasing.
+        if np.all(np.array(self._recording_offsets) == 0):
+            bounds = np.nonzero(np.diff(self._spike_recordings) > 0)[0]
+            self._recording_offsets = np.cumsum(np.hstack(([0],
+                                                           _spikes[bounds],
+                                                           _spikes[-1])))
         self._spike_samples = _concatenate_spikes(_spikes,
                                                   self._spike_recordings,
                                                   self._recording_offsets)
+
+        if not np.all(np.diff(self._spike_samples.astype(np.int64)) >= 0):
+            msg = "The spike times must be increasing. "
+            spk = np.nonzero(np.diff(self._spike_samples.astype(np.int64)) < 0)
+            spk = spk[0]
+            msg += "The spurious spike ids are: " + str(spk.tolist())
+            raise ValueError(msg)
 
     def _load_spike_clusters(self):
         self._spike_clusters = self._kwik.read(self._spike_clusters_path)[:]
