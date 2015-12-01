@@ -40,4 +40,8 @@ There, you can implement
 
 * `MyPlugin.attach_to_cli(cli)`: This is called when the `phy` command-line script is called. You have a chance to customize the script and add your own subcommands using the [**click** library](http://click.pocoo.org/5/).
 
-* `MyPlugin.attach_to_gui(gui, ctx)`: This is called when you attach that plugin to a `GUI` instance. In that function, you can add views, create actions, connect to events, and do anything you want on the GUI. This allows you to create independent components for GUIs.
+* `MyPlugin.attach_to_gui(gui, session)`: This is called when you attach that plugin to a `GUI` instance. In that function, you can add views, create actions, connect to events, and do anything you want on the GUI. This allows you to create independent components for GUIs.
+
+When you create a GUI, you need to call `phy.gui.load_gui_plugins(gui, plugins, session)` to automatically load and bind all discovered plugins to the GUI. The list of plugins attached by default is specified in `c.MyGUI.plugins = ['MyPlugin']` in the config file in `~/.phy/phy_config.py`.
+
+The `session` is just a dictionary when you can pass any data you want to the plugins.
