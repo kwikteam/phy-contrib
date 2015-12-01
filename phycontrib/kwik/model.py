@@ -1027,6 +1027,7 @@ class KwikModel(object):
         self._save_spike_clusters(spike_clusters)
         self._save_cluster_groups(cluster_groups)
         self._save_clustering_metadata(clustering_metadata)
+        logger.info("Save the Kwik file at `%s`.", self.kwik_path)
 
         if to_close:
             self._kwik.close()

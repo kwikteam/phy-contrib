@@ -98,7 +98,6 @@ class KwikGUI(GUI):
         @self.connect_
         def on_request_save(spike_clusters, groups):
             groups = {c: g.title() for c, g in groups.items()}
-            # print(groups)
             self.model.save(spike_clusters, groups)
 
         # Create the context to pass to the plugins in `attach_to_gui()`.
