@@ -9,6 +9,7 @@
 
 import logging
 import os.path as op
+import shutil
 
 import click
 
@@ -40,8 +41,17 @@ class KwikGUI(GUI):
 
         # Load the Kwik dataset.
         self.path = op.realpath(op.expanduser(path))
+
+        # Backup the kwik file.
+        path_backup = self.path + '.bak'
+        if not op.exists(path_backup):
+            logger.info("Backup `%s`.".format(path_backup))
+            shutil.copy(self.path, path_backup)
+
+        # Initialize the Kwik model.
         self.model = KwikModel(path)
 
+        # Create the computing context.
         ctx = Context(op.join(op.dirname(self.path), '.phy/'))
 
         # Attach the manual clustering logic (wizard, merge, split,
@@ -84,6 +94,12 @@ class KwikGUI(GUI):
                               keys=None,  # disable Escape shortcut in the view
                               )
         ccg.attach(self)
+
+        @self.connect_
+        def on_request_save(spike_clusters, groups):
+            groups = {c: g.title() for c, g in groups.items()}
+            # print(groups)
+            self.model.save(spike_clusters, groups)
 
         # Create the context to pass to the plugins in `attach_to_gui()`.
         session = Bunch({
