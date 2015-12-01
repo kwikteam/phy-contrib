@@ -52,7 +52,7 @@ class KwikGUI(GUI):
                               )
         mc.attach(self)
 
-        spc = self.model.spikes_per_cluster
+        spc = mc.clustering.spikes_per_cluster
         nfc = self.model.n_features_per_channel
 
         q, s = default_wizard_functions(waveforms=self.model.waveforms,
