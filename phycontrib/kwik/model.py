@@ -79,16 +79,21 @@ _spikedetekt_settings = {
 class PartialArray(object):
     """Proxy to a view of an array, allowing selection along the first
     dimensions and fixing the trailing dimensions."""
-    def __init__(self, arr, trailing_index=None):
+    def __init__(self, arr, trailing_index=None, reshape=None):
         self._arr = arr
         self._trailing_index = _as_tuple(trailing_index)
         self.shape = _partial_shape(arr.shape, self._trailing_index)
         self.dtype = arr.dtype
         self.ndim = len(self.shape)
+        # We can reshape selections dynamically.
+        # Use to reshape the 2D features array into a 3D array.
+        self.reshape = reshape
+        if reshape and reshape[0] == -1:
+            self.shape = (self.shape[0],) + self.reshape[1:]
 
     def __getitem__(self, item):
         if self._trailing_index is None:
-            return self._arr[item]
+            out = self._arr[item]
         else:
             item = _as_tuple(item)
             k = len(item)
@@ -100,7 +105,11 @@ class PartialArray(object):
             if len(item) != n:
                 raise ValueError("The array selection is invalid: "
                                  "{0}".format(str(item)))
-            return self._arr[item]
+            out = self._arr[item]
+        if self.reshape:
+            return out.reshape(self.reshape)
+        else:
+            return out
 
     def __len__(self):
         return self.shape[0]
@@ -763,7 +772,7 @@ class KwikModel(object):
                 return
             fm = self._kwx.read(path)
             self._features_masks = fm
-            self._features = PartialArray(fm, 0)
+            self._features = PartialArray(fm, 0, reshape=(-1, nc, nfpc))
 
             # This partial array simulates a (n_spikes, n_channels) array.
             self._masks = PartialArray(fm, (slice(0, nfpc * nc, nfpc), 1))

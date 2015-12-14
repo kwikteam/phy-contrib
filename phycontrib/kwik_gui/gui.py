@@ -16,6 +16,7 @@ import click
 from phy import IPlugin
 from phy.cluster.manual import (ManualClustering,
                                 WaveformView,
+                                FeatureView,
                                 CorrelogramView,
                                 TraceView,
                                 default_wizard_functions,
@@ -84,6 +85,14 @@ class KwikGUI(GUI):
                          channel_positions=self.model.probe.positions,
                          )
         w.attach(self)
+
+        # Create the feature view.
+        f = FeatureView(features=self.model.features,
+                        masks=self.model.masks,
+                        spike_clusters=self.model.spike_clusters,
+                        spike_times=self.model.spike_times,
+                        )
+        f.attach(self)
 
         # Create the waveform view.
         ccg = CorrelogramView(spike_times=self.model.spike_times,
