@@ -17,6 +17,7 @@ from phy import IPlugin
 from phy.cluster.manual import (ManualClustering,
                                 WaveformView,
                                 CorrelogramView,
+                                TraceView,
                                 default_wizard_functions,
                                 )
 from phy.gui import GUI, create_app, run_app, load_gui_plugins
@@ -81,7 +82,6 @@ class KwikGUI(GUI):
                          masks=self.model.masks,
                          spike_clusters=self.model.spike_clusters,
                          channel_positions=self.model.probe.positions,
-                         keys=None,  # disable Escape shortcut in the view
                          )
         w.attach(self)
 
@@ -91,9 +91,16 @@ class KwikGUI(GUI):
                               sample_rate=self.model.sample_rate,
                               bin_size=1e-3,
                               window_size=50e-3,
-                              keys=None,  # disable Escape shortcut in the view
                               )
         ccg.attach(self)
+
+        tv = TraceView(traces=self.model.traces,
+                       sample_rate=self.model.sample_rate,
+                       spike_times=self.model.spike_times,
+                       spike_clusters=self.model.spike_clusters,
+                       masks=self.model.masks,
+                       )
+        tv.attach(self)
 
         @self.connect_
         def on_request_save(spike_clusters, groups):
