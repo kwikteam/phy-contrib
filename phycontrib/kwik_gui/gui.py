@@ -24,6 +24,7 @@ from phy.cluster.manual import (ManualClustering,
 from phy.gui import GUI, create_app, run_app, load_gui_plugins
 from phy.io.context import Context
 from phy.utils import Bunch
+from phy.stats.clusters import mean, unmasked_channels, sorted_main_channels
 
 from phycontrib.kwik import KwikModel
 
@@ -92,6 +93,16 @@ class KwikGUI(GUI):
                         spike_clusters=self.model.spike_clusters,
                         spike_times=self.model.spike_times,
                         )
+
+        @f.set_best_channels_func
+        def best_channels(cluster_id):
+            """Select the best channels for a given cluster."""
+            spike_ids = mc.clustering.spikes_per_cluster[cluster_id]
+            m = self.model.masks[spike_ids]
+            mean_masks = mean(m)
+            uch = unmasked_channels(mean_masks)
+            return sorted_main_channels(mean_masks, uch)
+
         f.attach(self)
 
         # Create the waveform view.
