@@ -1378,6 +1378,10 @@ class KwikModel(object):
         return self._probe
 
     @property
+    def channel_positions(self):
+        return self.probe.positions
+
+    @property
     def traces(self):
         """Raw traces as found in the traces file(s).
 
