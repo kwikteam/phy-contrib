@@ -14,8 +14,7 @@ import shutil
 import click
 
 from phy import IPlugin
-from phy.utils import Bunch
-from phy.gui import GUIState, create_app, create_gui, run_app
+from phy.gui import create_app, create_gui, run_app
 
 from phycontrib.kwik import KwikModel
 
@@ -66,20 +65,8 @@ class KwikGUIPlugin(IPlugin):
                        'SaveGeometryStatePlugin',
                        ]
 
-            # Create the state.
-            ccg1 = Bunch(bin_size=1e-3,
-                         window_size=50e-3,
-                         excerpt_size=1000,
-                         n_excerpts=100,
-                         )
-
-            state = GUIState(plugins=plugins,
-                             n_spikes_max_per_cluster=100,
-                             CorrelogramView1=ccg1,
-                             )
-
             # Create the GUI.
-            gui = create_gui(name='KwikGUI', model=model, state=state)
+            gui = create_gui(name='KwikGUI', model=model, plugins=plugins)
 
             # Save.
             @gui.connect_
