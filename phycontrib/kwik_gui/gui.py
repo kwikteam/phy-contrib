@@ -63,7 +63,8 @@ class KwikGUIPlugin(IPlugin):
                        'FeatureViewPlugin',
                        'CorrelogramViewPlugin',
                        'TraceViewPlugin',
-                       'SaveGUIState']
+                       'SaveGeometryStatePlugin',
+                       ]
 
             # Create the state.
             ccg1 = Bunch(bin_size=1e-3,
@@ -95,21 +96,3 @@ class KwikGUIPlugin(IPlugin):
             # Close the GUI.
             gui.close()
             del gui
-
-
-class SaveGUIState(IPlugin):
-    def attach_to_gui(self, gui, state=None, model=None):
-
-        gs_name = '{}/geometry_state'.format(gui.name)
-
-        @gui.connect_
-        def on_close():
-            gs = gui.save_geometry_state()
-            logger.debug("Save geometry state to %s.", gs_name)
-            gui.context.save(gs_name, gs)
-
-        @gui.connect_
-        def on_show():
-            gs = gui.context.load(gs_name)
-            logger.debug("Restore geometry state from %s.", gs_name)
-            gui.restore_geometry_state(gs)
