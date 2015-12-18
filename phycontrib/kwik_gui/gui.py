@@ -66,7 +66,11 @@ class KwikGUIPlugin(IPlugin):
                        ]
 
             # Create the GUI.
-            gui = create_gui(name='KwikGUI', model=model, plugins=plugins)
+            gui = create_gui(name='KwikGUI',
+                             subtitle=model.kwik_path,
+                             model=model,
+                             plugins=plugins,
+                             )
 
             # Save.
             @gui.connect_
