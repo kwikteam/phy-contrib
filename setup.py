@@ -9,6 +9,7 @@
 
 import os
 import os.path as op
+import shutil
 from textwrap import dedent
 from setuptools import setup
 
@@ -40,11 +41,27 @@ def _create_loader_file():
                 """).lstrip())
 
 
+def _copy_kwik_gui_state():
+    """Copy the state.json file."""
+    gui_dir = op.expanduser('~/.phy/KwikGUI/')
+    if not op.exists(gui_dir):
+        os.makedirs(gui_dir)
+    # Create the script if it doesn't already exist.
+    path = gui_dir + 'state.json'
+    if op.exists(path):
+        return
+    curdir = op.dirname(op.realpath(__file__))
+    from_path = op.join(curdir, 'phycontrib', 'kwik_gui',
+                        'static', 'state.json')
+    shutil.copy(from_path, path)
+
+
 class develop(_develop):
     def run(self):
         """Create the loader file once python setup.py develop succeeds."""
         _develop.run(self)
         _create_loader_file()
+        _copy_kwik_gui_state()
 
 
 class install(_install):
@@ -52,6 +69,7 @@ class install(_install):
     def run(self):
         _install.run(self)
         _create_loader_file()
+        _copy_kwik_gui_state()
 
 
 setup(
