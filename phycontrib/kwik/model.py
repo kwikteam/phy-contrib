@@ -15,7 +15,7 @@ import numpy as np
 import six
 from six import string_types
 
-from .h5 import open_h5, File
+from .h5 import open_h5, File, _mmap_h5
 from phy.cluster.manual import ClusterMeta
 from phy.traces.waveform import WaveformLoader, SpikeLoader
 from phy.traces.filter import bandpass_filter, apply_filter
@@ -757,26 +757,39 @@ class KwikModel(object):
     def _load_features_masks(self):
 
         # Load features masks.
-        path = '{0:s}/features_masks'.format(self._channel_groups_path)
+        h5_path = '{0:s}/features_masks'.format(self._channel_groups_path)
 
         nfpc = self._metadata['n_features_per_channel']
         nc = len(self.channel_order)
 
-        if self._kwx is not None:
-            self._kwx = _open_h5_if_exists(self.kwik_path, 'kwx')
-            if path not in self._kwx:
+        basename, ext = op.splitext(self.kwik_path)
+        kwx_path = basename + '.kwx'
+
+        if not op.exists(kwx_path):
+            logger.warn("The `.kwx` file hasn't been found. "
+                        "Features and masks won't be available.")
+            return
+
+        with open_h5(kwx_path, 'r') as f:
+            if h5_path not in f:
                 logger.debug("There are no features and masks in the "
                              "`.kwx` file.")
-                # No need to keep the file open if it is empty.
-                self._kwx.close()
                 return
-            fm = self._kwx.read(path)
-            self._features_masks = fm
-            self._features = PartialArray(fm, 0, reshape=(-1, nc, nfpc))
 
-            # This partial array simulates a (n_spikes, n_channels) array.
-            self._masks = PartialArray(fm, (slice(0, nfpc * nc, nfpc), 1))
-            assert self._masks.shape == (self.n_spikes, nc)
+        # Now we are sure that the kwx file exists and contains the features
+        # and masks.
+
+        # NOTE: we bypass HDF5 when reading the features_masks array,
+        # for performance reasons. We retrieve the offset in the file
+        # and use NumPy memmap.
+        # fm = self._kwx.read(path)
+        fm = _mmap_h5(kwx_path, h5_path)
+        self._features_masks = fm
+        self._features = PartialArray(fm, 0, reshape=(-1, nc, nfpc))
+
+        # This partial array simulates a (n_spikes, n_channels) array.
+        self._masks = PartialArray(fm, (slice(0, nfpc * nc, nfpc), 1))
+        assert self._masks.shape == (self.n_spikes, nc)
 
     def _load_spikes(self):
         # Load spike samples.
@@ -911,14 +924,6 @@ class KwikModel(object):
             i += trace.shape[0] + 1
         self._traces = _concatenate_virtual_arrays(traces)
 
-    def has_kwx(self):
-        """Returns whether the `.kwx` file is present.
-
-        If not, the features and masks won't be available.
-
-        """
-        return self._kwx is not None
-
     def open(self, kwik_path, channel_group=None, clustering=None):
         """Open a Kwik dataset.
 
@@ -986,12 +991,6 @@ class KwikModel(object):
         if not self._kwik.is_open():
             raise IOError("File `{0}` failed to open.".format(kwik_path))
         self._check_kwik_version()
-
-        # Open the KWX and KWD files.
-        self._kwx = _open_h5_if_exists(kwik_path, 'kwx')
-        if self._kwx is None:
-            logger.warn("The `.kwx` file hasn't been found. "
-                        "Features and masks won't be available.")
 
         # Load the data.
         self._load_meta()
@@ -1567,8 +1566,7 @@ class KwikModel(object):
         handles to all raw data files"""
 
         logger.debug("Closing files")
-        if self._kwx is not None:
-            self._kwx.close()
+        del self._features_masks
         for f in self._opened_files:
             # upside-down if statement to avoid false positive lint error
             if not (isinstance(f, np.ndarray)):

@@ -88,7 +88,6 @@ def test_kwik_empty(tempdir):
     assert model.sample_rate == sample_rate
     assert model.n_channels == 3
     assert model.spike_samples is None
-    assert model.has_kwx()
     assert model.n_spikes == 0
     assert model.n_clusters == 0
     model.describe()

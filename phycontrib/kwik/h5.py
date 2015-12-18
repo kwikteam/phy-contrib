@@ -51,6 +51,16 @@ def _check_hdf5_path(h5_file, path):
         raise ValueError("{path} doesn't exist.".format(path=path))
 
 
+def _mmap_h5(path, h5path):
+    with h5py.File(path, driver='sec2') as f:
+        ds = f[h5path]
+        offset = ds.id.get_offset()
+        dtype = ds.dtype
+        shape = ds.shape
+    arr = np.memmap(path, mode='r', shape=shape, offset=offset, dtype=dtype)
+    return arr
+
+
 #------------------------------------------------------------------------------
 # File class
 #------------------------------------------------------------------------------
