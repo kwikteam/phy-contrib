@@ -548,6 +548,28 @@ def cluster_group_id(name_or_id):
         return name_or_id
 
 
+def _check_spikes_increasing(spike_samples):
+
+    while not np.all(np.diff(spike_samples) >= 0):
+        # NOTE: for an unknown reason, spike times are not
+        # always strictly increasing in Kwik files. Mostly, there is
+        # a difference of 1 sample, e.g. [..., 123456, 123455, 123490, ...]
+        # We try to fix this specific problem, otherwise we raise an
+        # error. The program makes the assumption that spike times
+        # are always increasing. Otherwise, the CCG computation may fail.
+        # There might be other issues as well.
+        msg = "The spike times must be increasing. "
+        spk = np.nonzero(np.diff(spike_samples) < 0)[0]
+        msg += "The spurious spike ids are: %s (%d)" % (str(spk[:9].tolist()),
+                                                        len(spk))
+        logger.debug(msg)
+        # logger.debug(str(spike_samples[spk[:10]].tolist()))
+        # logger.debug(str(spike_samples[spk[:10]+1].tolist()))
+        logger.debug("Trying a quick hack to fix the problem.")
+        spike_samples[spk + 1] += 1
+    return spike_samples
+
+
 #------------------------------------------------------------------------------
 # KwikModel class
 #------------------------------------------------------------------------------
@@ -813,25 +835,8 @@ class KwikModel(object):
         self._spike_samples = _concatenate_spikes(_spikes,
                                                   self._spike_recordings,
                                                   self._recording_offsets)
-
-        if not np.all(np.diff(self._spike_samples) >= 0):
-            # NOTE: for an unknown reason, spike times are not
-            # always strictly increasing in Kwik files. Mostly, there is
-            # a difference of 1 sample, e.g. [..., 123456, 123455, 123490, ...]
-            # We try to fix this specific problem, otherwise we raise an
-            # error. The program makes the assumption that spike times
-            # are always increasing. Otherwise, the CCG computation may fail.
-            # There might be other issues as well.
-            msg = "The spike times must be increasing. "
-            spk = np.nonzero(np.diff(self._spike_samples) < 0)
-            spk = spk[0]
-            msg += "The spurious spike ids are: " + str(spk.tolist())
-            logger.debug(msg)
-            logger.debug("Trying a quick hack to fix the problem.")
-            self._spike_samples[spk + 1] += 1
-            if not np.all(np.diff(self._spike_samples) >= 0):
-                logger.debug("The quick hack didn't work out, failing now.")
-                raise ValueError(msg)
+        # Check that spikes are increasing.
+        _check_spikes_increasing(self._spike_samples)
 
     def _load_spike_clusters(self):
         self._spike_clusters = self._kwik.read(self._spike_clusters_path)[:]
