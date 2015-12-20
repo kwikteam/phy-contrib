@@ -55,6 +55,10 @@ def _mmap_h5(path, h5path):
     with h5py.File(path, driver='sec2') as f:
         ds = f[h5path]
         offset = ds.id.get_offset()
+        # Ensure we have a non-compressed contiguous array.
+        assert ds.chunks is None
+        assert ds.compression is None
+        assert offset > 0
         dtype = ds.dtype
         shape = ds.shape
     arr = np.memmap(path, mode='r', shape=shape, offset=offset, dtype=dtype)
