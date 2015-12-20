@@ -17,8 +17,6 @@ dependencies:
   - joblib
   - cython
   - click
-  - dask
   - pip:
     - klustakwik2
-    - git+https://github.com/blaze/dask.git
     - git+https://github.com/kwikteam/phy.git@kill-kwik
