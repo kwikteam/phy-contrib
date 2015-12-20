@@ -1,0 +1,23 @@
+name: phy
+channels:
+  - kwikteam
+dependencies:
+  - python
+  - numpy=1.9
+  - vispy
+  - matplotlib
+  - scipy
+  - h5py
+  - pyqt
+  - ipython
+  - requests
+  - traitlets
+  - six
+  - ipyparallel
+  - joblib
+  - cython
+  - click
+  - pip:
+    - klustakwik2
+    - git+https://github.com/blaze/dask.git
+    - git+https://github.com/kwikteam/phy.git@kill-kwik
