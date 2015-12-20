@@ -57,6 +57,7 @@ class KwikGUIPlugin(IPlugin):
 
             # List of plugins activated by default.
             plugins = ['ContextPlugin',
+                       'ClusterStorePlugin',
                        'ManualClusteringPlugin',
                        'WaveformViewPlugin',
                        'FeatureViewPlugin',
