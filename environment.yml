@@ -3,6 +3,7 @@ channels:
   - kwikteam
 dependencies:
   - python
+  - pip
   - numpy=1.9
   - vispy
   - matplotlib
