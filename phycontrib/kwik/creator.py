@@ -22,7 +22,8 @@ from phy.utils._types import _as_array
 from phy.io.array import _unique
 
 from .h5 import open_h5
-from .model import _dat_n_samples, _DEFAULT_GROUPS, _spikedetekt_settings
+from .model import _DEFAULT_GROUPS, _spikedetekt_settings
+from .traces import _dat_n_samples
 
 logger = logging.getLogger(__name__)
 
