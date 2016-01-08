@@ -285,8 +285,6 @@ def _concatenate_virtual_arrays(arrs, cols=None):
     n = len(arrs)
     if n == 0:
         return None
-    elif n == 1:
-        return arrs[0]
     return ConcatenatedArrays(arrs, cols)
 
 
