@@ -28,6 +28,7 @@ def _dat_n_samples(filename, dtype=None, n_channels=None):
 
 
 def _concat_dask(arrs):
+    """NOTE: dask is currently not used because of severe performance issues"""
     from dask.array import concatenate, from_array
     return concatenate([from_array(arr, chunks=arr.shape) for arr in arrs],
                        axis=0)
@@ -74,9 +75,8 @@ def _read_dat(filename, dtype=None, shape=None, offset=0, n_channels=None):
                      mode='r', offset=offset)
 
 
-def _read_multiple_dat(filenames, dtype=None, offset=0, n_channels=None):
-    return _concat_dask([read_dat(fn, dtype=dtype, offset=offset,
-                                  n_channels=n_channels) for fn in filenames])
+def _read_multiple_dat(filenames, **kwargs):
+    return _concat_dask([read_dat(fn, **kwargs) for fn in filenames])
 
 
 def read_dat(filename, *args, **kwargs):

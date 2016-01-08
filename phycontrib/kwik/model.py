@@ -118,9 +118,11 @@ class PartialArray(object):
 class ConcatenatedArrays(object):
     """This object represents a concatenation of several memory-mapped
     arrays."""
-    def __init__(self, arrs):
+    def __init__(self, arrs, cols=None):
         assert isinstance(arrs, list)
         self.arrs = arrs
+        # Reordering of the columns.
+        self.cols = cols or slice(None, None, None)
         self.offsets = np.concatenate([[0], np.cumsum([arr.shape[0]
                                                        for arr in arrs])],
                                       axis=0)
@@ -174,7 +176,7 @@ class ConcatenatedArrays(object):
                                                    rec_stop)]
         l += [chunk_stop]
         # Apply the rest of the index.
-        return _fill_index(np.concatenate(l, axis=0), item)
+        return _fill_index(np.concatenate(l, axis=0), item)[:, self.cols]
 
     def __len__(self):
         return self.shape[0]
@@ -272,14 +274,14 @@ def _partial_shape(shape, trailing_index):
     return shape[:len_item] + trailing_arr.shape
 
 
-def _concatenate_virtual_arrays(arrs):
+def _concatenate_virtual_arrays(arrs, cols=None):
     """Return a virtual concatenate of several NumPy arrays."""
     n = len(arrs)
     if n == 0:
         return None
     elif n == 1:
         return arrs[0]
-    return ConcatenatedArrays(arrs)
+    return ConcatenatedArrays(arrs, cols)
 
 
 def _dat_n_samples(filename, dtype=None, n_channels=None):
@@ -766,6 +768,8 @@ class KwikModel(object):
         self._channels = np.array(_list_channels(self._kwik.h5py_file,
                                                  self._channel_group))
         self._channel_order = self._probe.channels
+        if self._traces is not None:
+            self._traces.cols = self._channel_order
         assert set(self._channel_order) <= set(self._channels)
 
     def _load_channel_groups(self, channel_group=None):
@@ -927,7 +931,8 @@ class KwikModel(object):
         for trace in traces:
             self._recording_offsets.append(i)
             i += trace.shape[0] + 1
-        self._traces = _concatenate_virtual_arrays(traces)
+        self._traces = _concatenate_virtual_arrays(traces,
+                                                   self._channel_order)
 
     def open(self, kwik_path, channel_group=None, clustering=None):
         """Open a Kwik dataset.
