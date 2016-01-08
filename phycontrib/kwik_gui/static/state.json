@@ -1,4 +1,8 @@
 {
+  "ClusterView": {
+    "quality": "max_waveform_amplitude",
+    "similarity": "most_similar_clusters"
+  },
   "CorrelogramView1": {
     "bin_size": 0.002,
     "uniform_normalization": true,
