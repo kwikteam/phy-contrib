@@ -122,12 +122,17 @@ class ConcatenatedArrays(object):
         assert isinstance(arrs, list)
         self.arrs = arrs
         # Reordering of the columns.
-        self.cols = cols or slice(None, None, None)
+        self.cols = cols
         self.offsets = np.concatenate([[0], np.cumsum([arr.shape[0]
                                                        for arr in arrs])],
                                       axis=0)
         self.dtype = arrs[0].dtype if arrs else None
-        self.shape = (self.offsets[-1],) + arrs[0].shape[1:]
+
+    @property
+    def shape(self):
+        ncols = (len(self.cols) if self.cols is not None
+                 else self.arrs[0].shape[1])
+        return (self.offsets[-1], ncols)
 
     def _get_recording(self, index):
         """Return the recording that contains a given index."""
@@ -142,11 +147,12 @@ class ConcatenatedArrays(object):
         return recs[-1]
 
     def __getitem__(self, item):
+        cols = self.cols if self.cols is not None else slice(None, None, None)
         # Get the start and stop indices of the requested item.
         start, stop = _start_stop(item)
         # Return the concatenation of all arrays.
         if start is None and stop is None:
-            return np.concatenate(self.arrs, axis=0)
+            return np.concatenate(self.arrs, axis=0)[:, cols]
         if start is None:
             start = 0
         if stop is None:
@@ -164,7 +170,7 @@ class ConcatenatedArrays(object):
         if rec_start == rec_stop:
             # Apply the rest of the index.
             return _fill_index(self.arrs[rec_start][start_rel:stop_rel],
-                               item)
+                               item)[:, cols]
         chunk_start = self.arrs[rec_start][start_rel:]
         chunk_stop = self.arrs[rec_stop][:stop_rel]
         # Concatenate all chunks.
@@ -176,7 +182,7 @@ class ConcatenatedArrays(object):
                                                    rec_stop)]
         l += [chunk_stop]
         # Apply the rest of the index.
-        return _fill_index(np.concatenate(l, axis=0), item)[:, self.cols]
+        return _fill_index(np.concatenate(l, axis=0), item)[:, cols]
 
     def __len__(self):
         return self.shape[0]
@@ -718,7 +724,9 @@ class KwikModel(object):
                                                     dtype=np.float32)
 
         # Update the list of channels for the waveform loader.
-        self._waveform_loader.channels = self._channel_order
+        # UPDATE: no need to do this because channel_order is now
+        # taken into account in the traces
+        # self._waveform_loader.channels = self._channel_order
 
     def _create_cluster_metadata(self):
         self._cluster_metadata = ClusterMeta()
@@ -1112,7 +1120,7 @@ class KwikModel(object):
             self._kwik.close()
 
         # Update the list of channels for the waveform loader.
-        self._waveform_loader.channels = self._channel_order
+        # self._waveform_loader.channels = self._channel_order
 
     def _clustering_changed(self, value):
         """Called when the clustering changes."""
