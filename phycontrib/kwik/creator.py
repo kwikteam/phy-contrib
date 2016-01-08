@@ -23,7 +23,7 @@ from phy.io.array import _unique
 
 from .h5 import open_h5
 from .model import _DEFAULT_GROUPS, _spikedetekt_settings
-from .traces import _dat_n_samples
+from phycontrib.csicsvari.traces import _dat_n_samples
 
 logger = logging.getLogger(__name__)
 

@@ -12,7 +12,7 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 
 from ..traces import read_dat, _dat_n_samples, read_kwd
-from ..mock import artificial_traces
+from phy.io.mock import artificial_traces
 
 
 #------------------------------------------------------------------------------
