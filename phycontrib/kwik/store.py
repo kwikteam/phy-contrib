@@ -170,6 +170,10 @@ def create_cluster_store(model, selector=None, context=None):
     # -------------------------------------------------------------------------
 
     @cs.add(cache='memory')
+    def n_spikes(cluster_id):
+        return len(selector.spikes_per_cluster(cluster_id))
+
+    @cs.add(cache='memory')
     def best_channels(cluster_id):
         mm = cs.mean_masks(cluster_id)
         uch = get_unmasked_channels(mm)
