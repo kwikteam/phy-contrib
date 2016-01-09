@@ -245,5 +245,6 @@ class ClusterStorePlugin(IPlugin):
         selector = Selector(spike_clusters=model.spike_clusters,
                             spikes_per_cluster=spikes_per_cluster,
                             )
+        gui.register(selector=selector)
         cs = create_cluster_store(model, selector=selector, context=ctx)
         cs.attach(gui)
