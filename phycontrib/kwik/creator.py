@@ -78,14 +78,12 @@ class KwikCreator(object):
         with open_h5(self.kwik_path, 'w') as f:
             f.write_attr('/', 'kwik_version', 2)
             f.write_attr('/', 'name', self.basename)
-            f.write_attr('/', 'creator_version', 'phy '
-                         + phy.__version_git__)
+            f.write_attr('/', 'creator_version', 'phy ' + phy.__version_git__)
 
         assert not op.exists(self.kwx_path)
         with open_h5(self.kwx_path, 'w') as f:
             f.write_attr('/', 'kwik_version', 2)
-            f.write_attr('/', 'creator_version', 'phy '
-                         + phy.__version_git__)
+            f.write_attr('/', 'creator_version', 'phy ' + phy.__version_git__)
 
     def set_metadata(self, path, **kwargs):
         """Set metadata fields in a HDF5 path."""
