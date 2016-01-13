@@ -12,14 +12,13 @@ import logging
 import numpy as np
 
 from phy.io.store import ClusterStore, _get_data_lim, get_closest_clusters
-from phy.io.array import Selector
 from phy.stats.clusters import (mean,
                                 get_max_waveform_amplitude,
                                 get_mean_masked_features_distance,
                                 get_unmasked_channels,
                                 get_sorted_main_channels,
                                 )
-from phy.utils import Bunch, IPlugin
+from phy.utils import Bunch
 
 logger = logging.getLogger(__name__)
 
@@ -227,24 +226,3 @@ def create_cluster_store(model, selector=None, context=None):
         return mt.astype(model.traces.dtype)
 
     return cs
-
-
-class ClusterStorePlugin(IPlugin):
-    def attach_to_gui(self, gui):
-        ctx = gui.request('context')
-        model = gui.request('model')
-
-        # NOTE: we get the spikes_per_cluster from the Clustering instance.
-        # We need to access it from a function to avoid circular dependencies
-        # between the cluster store and manual clustering plugins.
-        def spikes_per_cluster(cluster_id):
-            mc = gui.request('manual_clustering')
-            return mc.clustering.spikes_per_cluster[cluster_id]
-
-        assert ctx
-        selector = Selector(spike_clusters=model.spike_clusters,
-                            spikes_per_cluster=spikes_per_cluster,
-                            )
-        gui.register(selector=selector)
-        cs = create_cluster_store(model, selector=selector, context=ctx)
-        cs.attach(gui)

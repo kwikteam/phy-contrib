@@ -7,4 +7,4 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from .gui import KwikGUIPlugin  # noqa
+from .gui import KwikGUIPlugin, create_kwik_gui  # noqa
