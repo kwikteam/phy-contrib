@@ -104,8 +104,6 @@ def create_kwik_gui(path, plugins=None):
     # Create the manual clustering.
     mc = ManualClustering(model.spike_clusters,
                           cluster_groups=model.cluster_groups,)
-    mc.attach(gui)
-    gui.manual_clustering = mc
 
     # Create the context.
     context = Context(op.join(op.dirname(path), '.phy'))
@@ -115,7 +113,8 @@ def create_kwik_gui(path, plugins=None):
         # HACK: we get the spikes_per_cluster from the Clustering instance.
         # We need to access it from a function to avoid circular dependencies
         # between the cluster store and manual clustering plugins.
-        return gui.manual_clustering.clustering.spikes_per_cluster[cluster_id]
+        mc = gui.request('manual_clustering')
+        return mc.clustering.spikes_per_cluster[cluster_id]
 
     selector = Selector(spike_clusters=model.spike_clusters,
                         spikes_per_cluster=spikes_per_cluster,
@@ -123,6 +122,8 @@ def create_kwik_gui(path, plugins=None):
     model.store = create_cluster_store(model,
                                        selector=selector,
                                        context=context)
+    mc.attach(gui)
+    gui.manual_clustering = mc
 
     # Add the views.
     add_waveform_view(gui)
