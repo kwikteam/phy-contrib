@@ -1281,7 +1281,7 @@ class KwikModel(object):
         """Duration of the experiment (in seconds)."""
         if self._traces is None:
             return 0.
-        return float(self.traces.shape[0]) / self.sample_rate
+        return float(self._traces.shape[0]) / self.sample_rate
 
     @property
     def channel_group(self):
@@ -1397,7 +1397,7 @@ class KwikModel(object):
         return self.probe.positions
 
     @property
-    def traces(self):
+    def all_traces(self):
         """Raw traces as found in the traces file(s).
 
         This object is memory-mapped to the HDF5 file, or `.dat` / `.bin` file,
@@ -1444,7 +1444,7 @@ class KwikModel(object):
                 if self._spike_samples is not None else 0)
 
     @property
-    def features(self):
+    def all_features(self):
         """Features from the current channel group.
 
         This is memory-mapped to the `.kwx` file.
@@ -1456,7 +1456,7 @@ class KwikModel(object):
         return self._features
 
     @property
-    def masks(self):
+    def all_masks(self):
         """Masks from the current channel group.
 
         This is memory-mapped to the `.kwx` file.
@@ -1468,7 +1468,7 @@ class KwikModel(object):
         return self._masks
 
     @property
-    def features_masks(self):
+    def all_features_masks(self):
         """Features-masks from the current channel group.
 
         This is memory-mapped to the `.kwx` file.
@@ -1480,7 +1480,7 @@ class KwikModel(object):
         return self._features_masks
 
     @property
-    def waveforms(self):
+    def all_waveforms(self):
         """High-passed filtered waveforms from the current channel group.
 
         This is a virtual array mapped to the traces file(s). Filtering is

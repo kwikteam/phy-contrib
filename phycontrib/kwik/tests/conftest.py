@@ -13,6 +13,7 @@ from pytest import fixture
 
 from phy.electrode.mea import staggered_positions
 from phy.io.array import _spikes_per_cluster
+from phy.io.context import Context
 from phy.io.mock import (artificial_waveforms,
                          artificial_features,
                          artificial_spike_clusters,
@@ -50,15 +51,16 @@ def model(tempdir):
     model.spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
     model.cluster_ids = np.unique(model.spike_clusters)
     model.channel_positions = staggered_positions(n_channels)
-    model.waveforms = artificial_waveforms(n_spikes, n_samples_w, n_channels)
-    model.masks = artificial_masks(n_spikes, n_channels)
-    model.traces = artificial_traces(n_samples_t, n_channels)
-    model.features = artificial_features(n_spikes, n_channels, n_features)
+    model.all_waveforms = artificial_waveforms(n_spikes, n_samples_w,
+                                               n_channels)
+    model.all_masks = artificial_masks(n_spikes, n_channels)
+    model.all_traces = artificial_traces(n_samples_t, n_channels)
+    model.all_features = artificial_features(n_spikes, n_channels, n_features)
 
     # features_masks array
-    f = model.features.reshape((n_spikes, -1))
-    m = np.repeat(model.masks, n_features, axis=1)
-    model.features_masks = np.dstack((f, m))
+    f = model.all_features.reshape((n_spikes, -1))
+    m = np.repeat(model.all_masks, n_features, axis=1)
+    model.all_features_masks = np.dstack((f, m))
 
     model.spikes_per_cluster = _spikes_per_cluster(model.spike_clusters)
     model.n_features_per_channel = n_features
@@ -66,3 +68,8 @@ def model(tempdir):
     model.cluster_groups = {c: None for c in range(n_clusters)}
 
     return model
+
+
+@fixture
+def context(tempdir):
+    return Context(tempdir)

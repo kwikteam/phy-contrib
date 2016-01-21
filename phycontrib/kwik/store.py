@@ -11,13 +11,14 @@ import logging
 
 import numpy as np
 
-from phy.io.store import ClusterStore, _get_data_lim, get_closest_clusters
+from phy.io.array import _concat, _get_data_lim, get_closest_clusters
 from phy.stats.clusters import (mean,
                                 get_max_waveform_amplitude,
                                 get_mean_masked_features_distance,
                                 get_unmasked_channels,
                                 get_sorted_main_channels,
                                 )
+from phy.cluster.manual.views import select_traces
 from phy.utils import Bunch
 
 logger = logging.getLogger(__name__)
@@ -28,13 +29,14 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 def create_cluster_store(model, selector=None, context=None):
-    cs = ClusterStore(context=context)
+    assert model
+    assert context
 
     # TODO: make this configurable.
     max_n_spikes_per_cluster = {
         'masks': 1000,
         'features': 1000,
-        'background_features_masks': 1000,
+        'background_features': 1000,
         'waveforms': 100,
         'waveform_lim': 1000,  # used to compute the waveform bounds
         'feature_lim': 1000,  # used to compute the waveform bounds
@@ -54,22 +56,25 @@ def create_cluster_store(model, selector=None, context=None):
     # Model data.
     # -------------------------------------------------------------------------
 
-    @cs.add(concat=True)
+    @_concat
+    @context.cache
     def masks(cluster_id):
         spike_ids = select(cluster_id, max_n_spikes_per_cluster['masks'])
-        if model.masks is None:
+        if model.all_masks is None:
             masks = np.ones((len(spike_ids), model.n_channels))
         else:
-            masks = np.atleast_2d(model.masks[spike_ids])
+            masks = np.atleast_2d(model.all_masks[spike_ids])
         assert masks.ndim == 2
         return _get_data(spike_ids=spike_ids,
                          masks=masks,
                          )
+    model.masks = masks
 
-    @cs.add(concat=True)
-    def features_masks(cluster_id):
+    @_concat
+    @context.cache
+    def features(cluster_id):
         spike_ids = select(cluster_id, max_n_spikes_per_cluster['features'])
-        fm = np.atleast_3d(model.features_masks[spike_ids])
+        fm = np.atleast_3d(model.all_features_masks[spike_ids])
         ns = fm.shape[0]
         nc = model.n_channels
         nfpc = model.n_features_per_channel
@@ -80,34 +85,21 @@ def create_cluster_store(model, selector=None, context=None):
                          features=f,
                          masks=m,
                          )
+    model.features = features
 
-    @cs.add(concat=True)
-    def features(cluster_id):
-        spike_ids = select(cluster_id, max_n_spikes_per_cluster['features'])
-        if model.features is None:
-            features = np.zeros((len(spike_ids),
-                                 model.n_channels,
-                                 model.n_features_per_channel,
-                                 ))
-        else:
-            features = np.atleast_2d(model.features[spike_ids])
-        assert features.ndim == 3
-        return _get_data(spike_ids=spike_ids,
-                         features=features,
-                         )
-
-    @cs.add
+    @context.cache
     def feature_lim():
         """Return the max of a subset of the feature amplitudes."""
-        return _get_data_lim(model.features,
+        return _get_data_lim(model.all_features,
                              max_n_spikes_per_cluster['feature_lim'])
+    model.feature_lim = feature_lim
 
-    @cs.add
-    def background_features_masks():
-        n = max_n_spikes_per_cluster['background_features_masks']
+    @context.cache
+    def background_features():
+        n = max_n_spikes_per_cluster['background_features']
         k = max(1, model.n_spikes // n)
-        features = model.features[::k]
-        masks = model.masks[::k]
+        features = model.all_features[::k]
+        masks = model.all_masks[::k]
         spike_ids = np.arange(0, model.n_spikes, k)
         assert spike_ids.shape == (features.shape[0],)
         assert features.ndim == 3
@@ -117,30 +109,23 @@ def create_cluster_store(model, selector=None, context=None):
                          features=features,
                          masks=masks,
                          )
+    model.background_features = background_features
 
-    @cs.add(concat=True)
+    @context.cache
+    def waveform_lim():
+        """Return the max of a subset of the waveform amplitudes."""
+        return _get_data_lim(model.all_waveforms,
+                             max_n_spikes_per_cluster['waveform_lim'])
+    model.waveform_lim = waveform_lim
+
+    @_concat
+    @context.cache
     def waveforms(cluster_id):
         spike_ids = select(cluster_id,
                            max_n_spikes_per_cluster['waveforms'])
-        waveforms = np.atleast_2d(model.waveforms[spike_ids])
+        waveforms = np.atleast_2d(model.all_waveforms[spike_ids])
         assert waveforms.ndim == 3
-        return _get_data(spike_ids=spike_ids,
-                         waveforms=waveforms,
-                         )
-
-    @cs.add
-    def waveform_lim():
-        """Return the max of a subset of the waveform amplitudes."""
-        return _get_data_lim(model.waveforms,
-                             max_n_spikes_per_cluster['waveform_lim'])
-
-    @cs.add(concat=True)
-    def waveforms_masks(cluster_id):
-        spike_ids = select(cluster_id,
-                           max_n_spikes_per_cluster['waveforms'])
-        waveforms = np.atleast_2d(model.waveforms[spike_ids])
-        assert waveforms.ndim == 3
-        masks = np.atleast_2d(model.masks[spike_ids])
+        masks = np.atleast_2d(model.all_masks[spike_ids])
         assert masks.ndim == 2
         # Ensure that both arrays have the same number of channels.
         assert masks.shape[1] == waveforms.shape[2]
@@ -148,81 +133,109 @@ def create_cluster_store(model, selector=None, context=None):
                          waveforms=waveforms,
                          masks=masks,
                          )
+    model.waveforms = waveforms
+
+    def traces(interval):
+        """Load traces and spikes in an interval."""
+        tr = select_traces(model.all_traces, interval,
+                           sample_rate=model.sample_rate,
+                           )
+        # Find spikes.
+        a, b = model.spike_times.searchsorted(interval)
+        st = model.spike_times[a:b]
+        sc = model.spike_clusters[a:b]
+        m = model.all_masks[a:b, :]
+        return Bunch(traces=tr,
+                     spike_times=st,
+                     spike_clusters=sc,
+                     masks=m,
+                     )
+    model.traces = traces
 
     # Mean quantities.
     # -------------------------------------------------------------------------
 
-    @cs.add
+    @context.cache
     def mean_masks(cluster_id):
         # We access [1] because we return spike_ids, masks.
-        return mean(cs.masks(cluster_id).masks)
+        return mean(model.masks(cluster_id).masks)
+    model.mean_masks = mean_masks
 
-    @cs.add
+    @context.cache
     def mean_features(cluster_id):
-        return mean(cs.features(cluster_id).features)
+        return mean(model.features(cluster_id).features)
+    model.mean_features = mean_features
 
-    @cs.add
+    @context.cache
     def mean_waveforms(cluster_id):
-        return mean(cs.waveforms(cluster_id).waveforms)
+        return mean(model.waveforms(cluster_id).waveforms)
+    model.mean_waveforms = mean_waveforms
 
     # Statistics.
     # -------------------------------------------------------------------------
 
-    @cs.add(cache='memory')
-    def n_spikes(cluster_id):
-        return len(selector.spikes_per_cluster(cluster_id))
+    # @context.cache(memcache=True)
+    # def n_spikes(cluster_id):
+    #     return len(selector.spikes_per_cluster(cluster_id))
+    # model.n_spikes = n_spikes
 
-    @cs.add(cache='memory')
+    @context.cache(memcache=True)
     def best_channels(cluster_id):
-        mm = cs.mean_masks(cluster_id)
+        mm = model.mean_masks(cluster_id)
         uch = get_unmasked_channels(mm)
         return get_sorted_main_channels(mm, uch)
+    model.best_channels = best_channels
 
-    @cs.add(cache='memory')
+    @context.cache(memcache=True)
     def best_channels_multiple(cluster_ids):
         best_channels = []
         for cluster in cluster_ids:
-            channels = cs.best_channels(cluster)
+            channels = model.best_channels(cluster)
             best_channels.extend([ch for ch in channels
                                   if ch not in best_channels])
         return best_channels
+    model.best_channels_multiple = best_channels_multiple
 
-    @cs.add(cache='memory')
+    @context.cache(memcache=True)
     def max_waveform_amplitude(cluster_id):
-        mm = cs.mean_masks(cluster_id)
-        mw = cs.mean_waveforms(cluster_id)
+        mm = model.mean_masks(cluster_id)
+        mw = model.mean_waveforms(cluster_id)
         assert mw.ndim == 2
         return np.asscalar(get_max_waveform_amplitude(mm, mw))
+    model.max_waveform_amplitude = max_waveform_amplitude
 
-    @cs.add(cache=None)
+    @context.cache(memcache=None)
     def mean_masked_features_score(cluster_0, cluster_1):
-        mf0 = cs.mean_features(cluster_0)
-        mf1 = cs.mean_features(cluster_1)
-        mm0 = cs.mean_masks(cluster_0)
-        mm1 = cs.mean_masks(cluster_1)
+        mf0 = model.mean_features(cluster_0)
+        mf1 = model.mean_features(cluster_1)
+        mm0 = model.mean_masks(cluster_0)
+        mm1 = model.mean_masks(cluster_1)
         nfpc = model.n_features_per_channel
         d = get_mean_masked_features_distance(mf0, mf1, mm0, mm1,
                                               n_features_per_channel=nfpc)
         s = 1. / max(1e-10, d)
         return s
+    model.mean_masked_features_score = mean_masked_features_score
 
-    @cs.add(cache='memory')
+    @context.cache(memcache=True)
     def most_similar_clusters(cluster_id):
         assert isinstance(cluster_id, int)
         return get_closest_clusters(cluster_id, model.cluster_ids,
-                                    cs.mean_masked_features_score,
+                                    model.mean_masked_features_score,
                                     max_n_similar_clusters)
+    model.most_similar_clusters = most_similar_clusters
 
     # Traces.
     # -------------------------------------------------------------------------
 
-    @cs.add
+    @context.cache
     def mean_traces():
         n = max_n_spikes_per_cluster['mean_traces']
-        nt = model.traces.shape[0]
+        nt = model.all_traces.shape[0]
         i = max(0, nt // 2 - n // 2)
         j = min(nt - 1, nt // 2 + n // 2)
-        mt = model.traces[i:j, :].mean(axis=0)
-        return mt.astype(model.traces.dtype)
+        mt = model.all_traces[i:j, :].mean(axis=0)
+        return mt.astype(model.all_traces.dtype)
+    model.mean_traces = mean_traces
 
-    return cs
+    return model

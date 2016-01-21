@@ -139,20 +139,20 @@ def test_kwik_open_full(tempdir):
     assert kwik.spike_clusters.min() in (0, 1, 2)
     assert kwik.spike_clusters.max() in(_N_CLUSTERS - 2, _N_CLUSTERS - 1)
 
-    assert kwik.features.shape == (_N_SPIKES, nc, _N_FETS)
-    kwik.features[0, ...]
+    assert kwik.all_features.shape == (_N_SPIKES, nc, _N_FETS)
+    kwik.all_features[0, ...]
 
-    assert kwik.masks.shape == (_N_SPIKES, nc)
+    assert kwik.all_masks.shape == (_N_SPIKES, nc)
 
-    assert kwik.traces.shape == (_N_SAMPLES_TRACES, nc)
+    assert kwik.all_traces.shape == (_N_SAMPLES_TRACES, nc)
 
-    assert kwik.waveforms[0].shape == (1, 40, nc)
-    assert kwik.waveforms[-1].shape == (1, 40, nc)
-    assert kwik.waveforms[-10].shape == (1, 40, nc)
-    assert kwik.waveforms[10].shape == (1, 40, nc)
-    assert kwik.waveforms[[10, 20]].shape == (2, 40, nc)
+    assert kwik.all_waveforms[0].shape == (1, 40, nc)
+    assert kwik.all_waveforms[-1].shape == (1, 40, nc)
+    assert kwik.all_waveforms[-10].shape == (1, 40, nc)
+    assert kwik.all_waveforms[10].shape == (1, 40, nc)
+    assert kwik.all_waveforms[[10, 20]].shape == (2, 40, nc)
     with raises(IndexError):
-        kwik.waveforms[_N_SPIKES + 10]
+        kwik.all_waveforms[_N_SPIKES + 10]
 
     with raises(ValueError):
         kwik.clustering = 'foo'
@@ -206,7 +206,7 @@ def test_kwik_open_no_kwd(tempdir):
     # Test implicit open() method.
     kwik = KwikModel(filename)
     with captured_logging() as buf:
-        kwik.waveforms[:]
+        kwik.all_waveforms[:]
 
     # Enusure that there is no error message.
     assert not buf.getvalue().strip()

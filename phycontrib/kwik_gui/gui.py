@@ -42,39 +42,36 @@ def _backup(path):
 
 def add_waveform_view(gui):
     model = gui.model
-    cs = model.store
-    v = WaveformView(waveforms_masks=model.store.waveforms_masks,
+    v = WaveformView(waveforms=model.waveforms,
                      channel_positions=model.channel_positions,
                      n_samples=model.n_samples_waveforms,
-                     waveform_lim=cs.waveform_lim(),
-                     best_channels=cs.best_channels_multiple,
+                     waveform_lim=model.waveform_lim(),
+                     best_channels=model.best_channels_multiple,
                      )
     v.attach(gui)
 
 
 def add_trace_view(gui):
     model = gui.model
-    cs = model.store
     v = TraceView(traces=model.traces,
                   sample_rate=model.sample_rate,
                   spike_times=model.spike_times,
                   spike_clusters=model.spike_clusters,
                   n_samples_per_spike=model.n_samples_waveforms,
                   masks=model.masks,
-                  mean_traces=cs.mean_traces(),
+                  mean_traces=model.mean_traces(),
                   )
     v.attach(gui)
 
 
 def add_feature_view(gui):
     model = gui.model
-    cs = model.store
-    v = FeatureView(features_masks=cs.features_masks,
-                    background_features_masks=cs.background_features_masks(),
+    v = FeatureView(features=model.features,
+                    background_features=model.background_features(),
                     spike_times=model.spike_times,
                     n_channels=model.n_channels,
                     n_features_per_channel=model.n_features_per_channel,
-                    feature_lim=cs.feature_lim(),
+                    feature_lim=model.feature_lim(),
                     )
     v.attach(gui)
 
@@ -119,9 +116,7 @@ def create_kwik_gui(path, plugins=None):
     selector = Selector(spike_clusters=model.spike_clusters,
                         spikes_per_cluster=spikes_per_cluster,
                         )
-    model.store = create_cluster_store(model,
-                                       selector=selector,
-                                       context=context)
+    create_cluster_store(model, selector=selector, context=context)
     mc.attach(gui)
     gui.manual_clustering = mc
 
