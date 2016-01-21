@@ -55,10 +55,9 @@ def add_trace_view(gui):
     model = gui.model
     v = TraceView(traces=model.traces,
                   sample_rate=model.sample_rate,
-                  spike_times=model.spike_times,
-                  spike_clusters=model.spike_clusters,
                   n_samples_per_spike=model.n_samples_waveforms,
-                  masks=model.masks,
+                  duration=model.duration,
+                  n_channels=model.n_channels,
                   mean_traces=model.mean_traces(),
                   )
     v.attach(gui)

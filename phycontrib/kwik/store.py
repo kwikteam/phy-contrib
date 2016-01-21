@@ -144,7 +144,7 @@ def create_cluster_store(model, selector=None, context=None):
         a, b = model.spike_times.searchsorted(interval)
         st = model.spike_times[a:b]
         sc = model.spike_clusters[a:b]
-        m = model.all_masks[a:b, :]
+        m = model.all_masks[a:b]
         return Bunch(traces=tr,
                      spike_times=st,
                      spike_clusters=sc,
