@@ -58,7 +58,6 @@ def add_trace_view(gui):
                   n_samples_per_spike=model.n_samples_waveforms,
                   duration=model.duration,
                   n_channels=model.n_channels,
-                  mean_traces=model.mean_traces(),
                   )
     v.attach(gui)
 

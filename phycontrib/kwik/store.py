@@ -40,7 +40,6 @@ def create_cluster_store(model, selector=None, context=None):
         'waveforms': 100,
         'waveform_lim': 1000,  # used to compute the waveform bounds
         'feature_lim': 1000,  # used to compute the waveform bounds
-        'mean_traces': 20000,  # number of samples in the middle of the traces
     }
     max_n_similar_clusters = 20
 
@@ -224,18 +223,5 @@ def create_cluster_store(model, selector=None, context=None):
                                     model.mean_masked_features_score,
                                     max_n_similar_clusters)
     model.most_similar_clusters = most_similar_clusters
-
-    # Traces.
-    # -------------------------------------------------------------------------
-
-    @context.cache
-    def mean_traces():
-        n = max_n_spikes_per_cluster['mean_traces']
-        nt = model.all_traces.shape[0]
-        i = max(0, nt // 2 - n // 2)
-        j = min(nt - 1, nt // 2 + n // 2)
-        mt = model.all_traces[i:j, :].mean(axis=0)
-        return mt.astype(model.all_traces.dtype)
-    model.mean_traces = mean_traces
 
     return model
