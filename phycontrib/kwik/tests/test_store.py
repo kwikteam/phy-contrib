@@ -18,8 +18,7 @@ from phy.io import Selector
 
 def test_create_cluster_store(model, context):
     spc = lambda c: model.spikes_per_cluster[c]
-    selector = Selector(spike_clusters=model.spike_clusters,
-                        spikes_per_cluster=spc)
+    selector = Selector(spc)
     create_cluster_store(model, selector=selector, context=context)
 
     nc = model.n_channels

@@ -8,10 +8,17 @@
 # -----------------------------------------------------------------------------
 
 import logging
+import os.path as op
+import shutil
 
 import numpy as np
 
-from phy.io.array import _concat, _get_data_lim, get_closest_clusters
+from phy.io.array import (concat_per_cluster,
+                          _get_data_lim,
+                          get_closest_clusters,
+                          Selector,
+                          )
+from phy.io.context import Context
 from phy.stats.clusters import (mean,
                                 get_max_waveform_amplitude,
                                 get_mean_masked_features_distance,
@@ -20,6 +27,7 @@ from phy.stats.clusters import (mean,
                                 )
 from phy.cluster.manual.views import select_traces
 from phy.utils import Bunch
+from .model import KwikModel
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +63,7 @@ def create_cluster_store(model, selector=None, context=None):
     # Model data.
     # -------------------------------------------------------------------------
 
-    @_concat
+    @concat_per_cluster
     @context.cache
     def masks(cluster_id):
         spike_ids = select(cluster_id, max_n_spikes_per_cluster['masks'])
@@ -69,7 +77,7 @@ def create_cluster_store(model, selector=None, context=None):
                          )
     model.masks = masks
 
-    @_concat
+    @concat_per_cluster
     @context.cache
     def features(cluster_id):
         spike_ids = select(cluster_id, max_n_spikes_per_cluster['features'])
@@ -117,7 +125,7 @@ def create_cluster_store(model, selector=None, context=None):
                              max_n_spikes_per_cluster['waveform_lim'])
     model.waveform_lim = waveform_lim
 
-    @_concat
+    @concat_per_cluster
     @context.cache
     def waveforms(cluster_id):
         spike_ids = select(cluster_id,
@@ -138,11 +146,32 @@ def create_cluster_store(model, selector=None, context=None):
         """Load traces and spikes in an interval."""
         tr = select_traces(model.all_traces, interval,
                            sample_rate=model.sample_rate,
-                           )
+                           ).astype(np.float32).copy()
         # Find spikes.
         a, b = model.spike_times.searchsorted(interval)
         st = model.spike_times[a:b]
         sc = model.spike_clusters[a:b]
+
+        # Remove templates.
+        wm = model.whitening_matrix / 200.
+        temp = model.templates[sc]
+        temp = np.dot(temp, np.linalg.inv(wm))
+        amp = model.all_amplitudes[a:b]
+        w = temp * amp[:, np.newaxis, np.newaxis]
+        n = tr.shape[0]
+        for index in range(w.shape[0]):
+            t = int(round((st[index] - interval[0]) * model.sample_rate))
+            i, j = 30, 31
+            x = w[index]  # (n_samples, n_channels)
+            sa, sb = t - i, t + j
+            if sa < 0:
+                x = x[-sa:, :]
+                sa = 0
+            elif sb > n:
+                x = x[:-(sb - n), :]
+                sb = n
+            tr[sa:sb, :] -= x
+
         m = model.all_masks[a:b]
         return Bunch(traces=tr,
                      spike_times=st,
@@ -172,11 +201,6 @@ def create_cluster_store(model, selector=None, context=None):
 
     # Statistics.
     # -------------------------------------------------------------------------
-
-    # @context.cache(memcache=True)
-    # def n_spikes(cluster_id):
-    #     return len(selector.spikes_per_cluster(cluster_id))
-    # model.n_spikes = n_spikes
 
     @context.cache(memcache=True)
     def best_channels(cluster_id):
@@ -223,5 +247,44 @@ def create_cluster_store(model, selector=None, context=None):
                                     model.mean_masked_features_score,
                                     max_n_similar_clusters)
     model.most_similar_clusters = most_similar_clusters
+
+    return model
+
+
+# -----------------------------------------------------------------------------
+# Model with cache
+# -----------------------------------------------------------------------------
+
+def _backup(path):
+    """Backup a file."""
+    path_backup = path + '.bak'
+    if not op.exists(path_backup):
+        logger.info("Backup `%s`.".format(path_backup))
+        shutil.copy(path, path_backup)
+
+
+def create_model(path):
+    """Create a model from a .kwik file."""
+
+    # Make a backup of the Kwik file.
+    path = op.realpath(op.expanduser(path))
+    _backup(path)
+
+    # Open the dataset.
+    model = KwikModel(path)
+
+    # Create the context.
+    context = Context(op.join(op.dirname(path), '.phy'))
+
+    # Define and cache the cluster -> spikes function.
+    @context.cache(memcache=True)
+    def spikes_per_cluster(cluster_id):
+        return np.nonzero(model.spike_clusters == cluster_id)[0]
+    model.spikes_per_cluster = spikes_per_cluster
+
+    selector = Selector(spike_clusters=model.spike_clusters,
+                        spikes_per_cluster=model.spikes_per_cluster,
+                        )
+    create_cluster_store(model, selector=selector, context=context)
 
     return model

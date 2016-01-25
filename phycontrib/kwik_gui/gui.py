@@ -8,14 +8,11 @@
 #------------------------------------------------------------------------------
 
 import logging
-import os.path as op
-import shutil
 
 import click
 
 from phy import IPlugin
 from phy.gui import create_app, create_gui, run_app
-from phy.io import Context, Selector
 from phy.cluster.manual.gui_component import ManualClustering
 from phy.cluster.manual.views import (WaveformView,
                                       TraceView,
@@ -23,7 +20,7 @@ from phy.cluster.manual.views import (WaveformView,
                                       CorrelogramView,
                                       )
 
-from phycontrib.kwik import KwikModel, create_cluster_store
+from phycontrib.kwik import create_model
 
 logger = logging.getLogger(__name__)
 
@@ -31,14 +28,6 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 # Kwik GUI
 #------------------------------------------------------------------------------
-
-def _backup(path):
-    """Backup a file."""
-    path_backup = path + '.bak'
-    if not op.exists(path_backup):
-        logger.info("Backup `%s`.".format(path_backup))
-        shutil.copy(path, path_backup)
-
 
 def add_waveform_view(gui):
     model = gui.model
@@ -84,10 +73,8 @@ def add_correlogram_view(gui):
 
 
 def create_kwik_gui(path, plugins=None):
-    # Open the dataset.
-    path = op.realpath(op.expanduser(path))
-    _backup(path)
-    model = KwikModel(path)
+    # Backup the kwik file, create the model, context, and selector.
+    model = create_model(path)
 
     # Create the GUI.
     gui = create_gui(name='KwikGUI',
@@ -98,23 +85,8 @@ def create_kwik_gui(path, plugins=None):
 
     # Create the manual clustering.
     mc = ManualClustering(model.spike_clusters,
+                          model.spikes_per_cluster,
                           cluster_groups=model.cluster_groups,)
-
-    # Create the context.
-    context = Context(op.join(op.dirname(path), '.phy'))
-
-    # Create the store.
-    def spikes_per_cluster(cluster_id):
-        # HACK: we get the spikes_per_cluster from the Clustering instance.
-        # We need to access it from a function to avoid circular dependencies
-        # between the cluster store and manual clustering plugins.
-        mc = gui.request('manual_clustering')
-        return mc.clustering.spikes_per_cluster[cluster_id]
-
-    selector = Selector(spike_clusters=model.spike_clusters,
-                        spikes_per_cluster=spikes_per_cluster,
-                        )
-    create_cluster_store(model, selector=selector, context=context)
     mc.attach(gui)
     gui.manual_clustering = mc
 
