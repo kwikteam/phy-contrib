@@ -151,27 +151,6 @@ def create_cluster_store(model, selector=None, context=None):
         a, b = model.spike_times.searchsorted(interval)
         st = model.spike_times[a:b]
         sc = model.spike_clusters[a:b]
-
-        # # Remove templates.
-        # wm = model.whitening_matrix / 200.
-        # temp = model.templates[sc]
-        # temp = np.dot(temp, np.linalg.inv(wm))
-        # amp = model.all_amplitudes[a:b]
-        # w = temp * amp[:, np.newaxis, np.newaxis]
-        # n = tr.shape[0]
-        # for index in range(w.shape[0]):
-        #     t = int(round((st[index] - interval[0]) * model.sample_rate))
-        #     i, j = 30, 31
-        #     x = w[index]  # (n_samples, n_channels)
-        #     sa, sb = t - i, t + j
-        #     if sa < 0:
-        #         x = x[-sa:, :]
-        #         sa = 0
-        #     elif sb > n:
-        #         x = x[:-(sb - n), :]
-        #         sb = n
-        #     tr[sa:sb, :] -= x
-
         m = model.all_masks[a:b]
         return Bunch(traces=tr,
                      spike_times=st,

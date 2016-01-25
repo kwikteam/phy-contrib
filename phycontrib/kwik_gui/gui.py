@@ -38,6 +38,7 @@ def add_waveform_view(gui):
                      best_channels=model.best_channels_multiple,
                      )
     v.attach(gui)
+    return v
 
 
 def add_trace_view(gui):
@@ -49,6 +50,7 @@ def add_trace_view(gui):
                   n_channels=model.n_channels,
                   )
     v.attach(gui)
+    return v
 
 
 def add_feature_view(gui):
@@ -61,6 +63,7 @@ def add_feature_view(gui):
                     feature_lim=model.feature_lim(),
                     )
     v.attach(gui)
+    return v
 
 
 def add_correlogram_view(gui):
@@ -70,6 +73,7 @@ def add_correlogram_view(gui):
                         sample_rate=model.sample_rate,
                         )
     v.attach(gui)
+    return v
 
 
 def create_kwik_gui(path, plugins=None):
