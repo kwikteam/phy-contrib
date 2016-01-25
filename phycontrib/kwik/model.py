@@ -20,7 +20,7 @@ from phy.cluster.manual import ClusterMeta
 from phy.traces.waveform import WaveformLoader, SpikeLoader
 from phy.traces.filter import bandpass_filter, apply_filter
 from phy.electrode.mea import MEA
-from phy.io.array import _spikes_per_cluster, _unique
+from phy.io.array import _unique
 from phy.utils._types import _is_integer, _as_array, _as_tuple
 
 logger = logging.getLogger(__name__)
@@ -598,7 +598,6 @@ class KwikModel(object):
         # Initialize fields.
         self._spike_samples = None
         self._spike_clusters = None
-        self._spikes_per_cluster = None
         self._metadata = None
         self._clustering = clustering or 'main'
         self._probe = None
@@ -1110,10 +1109,6 @@ class KwikModel(object):
         self._load_spikes()
         self._load_features_masks()
 
-        # Recalculate spikes_per_cluster manually
-        self._spikes_per_cluster = \
-            _spikes_per_cluster(self._spike_clusters, spike_ids=self.spike_ids)
-
         if _to_close:
             self._kwik.close()
 
@@ -1503,22 +1498,6 @@ class KwikModel(object):
         return self._spike_clusters
 
     @property
-    def spikes_per_cluster(self):
-        """Spikes per cluster from the current channel group and clustering."""
-        if self._spikes_per_cluster is None:
-            if self._spike_clusters is None:
-                self._spikes_per_cluster = {0: self.spike_ids}
-            else:
-                self._spikes_per_cluster = \
-                    _spikes_per_cluster(self._spike_clusters,
-                                        spike_ids=self.spike_ids)
-        return self._spikes_per_cluster
-
-    def spike_train(self, cluster_id):
-        """Return the spike times of a given cluster."""
-        return self.spike_times[self.spikes_per_cluster[cluster_id]]
-
-    @property
     def spike_times(self):
         """Spike times from the current channel_group.
 
@@ -1529,9 +1508,6 @@ class KwikModel(object):
 
         """
         return self.spike_samples.astype(np.float64) / self.sample_rate
-
-    def update_spikes_per_cluster(self, spc):
-        self._spikes_per_cluster = spc
 
     @property
     def cluster_metadata(self):
