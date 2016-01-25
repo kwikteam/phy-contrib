@@ -79,9 +79,9 @@ def create_kwik_gui(path, plugins=None):
     # Create the GUI.
     gui = create_gui(name='KwikGUI',
                      subtitle=model.kwik_path,
-                     model=model,
                      plugins=plugins,
                      )
+    gui.model = model
 
     # Create the manual clustering.
     mc = ManualClustering(model.spike_clusters,
