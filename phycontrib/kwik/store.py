@@ -153,14 +153,13 @@ def create_cluster_store(model, selector=None, context=None):
 
     def spikes_traces(interval):
         traces = model.traces(interval)[0]
-        b = extract_spikes(traces, interval,
-                           sample_rate=model.sample_rate,
-                           spike_times=model.spike_times,
-                           spike_clusters=model.spike_clusters,
-                           all_masks=model.all_masks,
-                           n_samples_waveforms=model.n_samples_waveforms,
-                           )
-        return b
+        return extract_spikes(traces, interval,
+                              sample_rate=model.sample_rate,
+                              spike_times=model.spike_times,
+                              spike_clusters=model.spike_clusters,
+                              all_masks=model.all_masks,
+                              n_samples_waveforms=model.n_samples_waveforms,
+                              )
     model.spikes_traces = spikes_traces
 
     # Mean quantities.
