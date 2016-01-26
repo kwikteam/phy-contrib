@@ -146,7 +146,8 @@ def create_cluster_store(model, selector=None, context=None):
         """Load traces and spikes in an interval."""
         tr = select_traces(model.all_traces, interval,
                            sample_rate=model.sample_rate,
-                           ).copy()
+                           )
+        tr = tr - np.mean(tr, axis=0)
         return [tr]
     model.traces = traces
 
