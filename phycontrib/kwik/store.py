@@ -151,8 +151,8 @@ def create_cluster_store(model, selector=None, context=None):
         return [tr]
     model.traces = traces
 
-    def spikes_traces(interval):
-        traces = model.traces(interval)[0]
+    def spikes_traces(interval, traces):
+        traces = traces[0]
         return extract_spikes(traces, interval,
                               sample_rate=model.sample_rate,
                               spike_times=model.spike_times,
