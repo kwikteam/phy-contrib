@@ -25,7 +25,7 @@ from phy.stats.clusters import (mean,
                                 get_unmasked_channels,
                                 get_sorted_main_channels,
                                 )
-from phy.cluster.manual.views import select_traces
+from phy.cluster.manual.views import select_traces, extract_spikes
 from phy.utils import Bunch
 from .model import KwikModel
 
@@ -146,18 +146,21 @@ def create_cluster_store(model, selector=None, context=None):
         """Load traces and spikes in an interval."""
         tr = select_traces(model.all_traces, interval,
                            sample_rate=model.sample_rate,
-                           ).astype(np.float32).copy()
-        # Find spikes.
-        a, b = model.spike_times.searchsorted(interval)
-        st = model.spike_times[a:b]
-        sc = model.spike_clusters[a:b]
-        m = model.all_masks[a:b]
-        return Bunch(traces=tr,
-                     spike_times=st,
-                     spike_clusters=sc,
-                     masks=m,
-                     )
+                           ).copy()
+        return [tr]
     model.traces = traces
+
+    def spikes_traces(interval):
+        traces = model.traces(interval)[0]
+        b = extract_spikes(traces, interval,
+                           sample_rate=model.sample_rate,
+                           spike_times=model.spike_times,
+                           spike_clusters=model.spike_clusters,
+                           all_masks=model.all_masks,
+                           n_samples_waveforms=model.n_samples_waveforms,
+                           )
+        return b
+    model.spikes_traces = spikes_traces
 
     # Mean quantities.
     # -------------------------------------------------------------------------

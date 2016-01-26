@@ -44,8 +44,8 @@ def add_waveform_view(gui):
 def add_trace_view(gui):
     model = gui.model
     v = TraceView(traces=model.traces,
+                  spikes=model.spikes_traces,
                   sample_rate=model.sample_rate,
-                  n_samples_per_spike=model.n_samples_waveforms,
                   duration=model.duration,
                   n_channels=model.n_channels,
                   )
