@@ -219,7 +219,7 @@ def create_cluster_store(model, selector=None, context=None):
 
     @context.memcache
     @context.cache
-    def closest_clusters(cluster_id):
+    def probe_distance(cluster_id):
         assert isinstance(cluster_id, int)
         # Position of the cluster's best channel.
         pos0 = model.best_channel_position(cluster_id)
@@ -228,12 +228,16 @@ def create_cluster_store(model, selector=None, context=None):
         # Positions of all clusters' best channels.
         pos = np.vstack([model.best_channel_position(int(clu))
                          for clu in model.cluster_ids])
+        assert pos.shape == (len(model.cluster_ids), n)
         # Distance of all clusters to the current cluster.
-        dist = np.sum((pos - pos0) ** 2, axis=1)
+        dist = (pos - pos0) ** 2
+        assert dist.shape == (len(model.cluster_ids), n)
+        dist = np.sum(dist, axis=1) ** .5
+        assert dist.shape == (len(model.cluster_ids),)
         # Closest clusters.
         ind = np.argsort(dist)[:max_n_similar_clusters]
         return [(int(model.cluster_ids[i]), float(dist[i])) for i in ind]
-    model.closest_clusters = closest_clusters
+    model.probe_distance = probe_distance
 
     return model
 

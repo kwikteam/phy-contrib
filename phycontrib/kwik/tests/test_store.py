@@ -73,4 +73,4 @@ def test_create_cluster_store(model, context):
     assert np.all(model.waveforms_amplitude(1) >= 0)
     assert model.best_channel(1) >= 0
     assert len(model.best_channel_position(1)) == 2
-    assert np.array(model.closest_clusters(1)).shape == (3, 2)
+    assert np.array(model.probe_distance(1)).shape == (3, 2)

@@ -90,6 +90,7 @@ def create_kwik_gui(path, plugins=None):
     # Create the manual clustering.
     mc = ManualClustering(model.spike_clusters,
                           model.spikes_per_cluster,
+                          similarity=model.probe_distance,
                           cluster_groups=model.cluster_groups,)
     mc.attach(gui)
     gui.manual_clustering = mc

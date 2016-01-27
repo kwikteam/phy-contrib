@@ -1,7 +1,7 @@
 {
   "ClusterView": {
-    "quality": "max_waveform_amplitude",
-    "similarity": "most_similar_clusters"
+    "quality": "n_spikes",
+    "similarity": "closest_clusters"
   },
   "CorrelogramView0": {
     "bin_size": 0.001,
@@ -22,7 +22,6 @@
       3.797498335832415,
       4.594972986357222
     ],
-    "do_show_means": false,
     "do_zoom_on_channels": true,
     "overlap": false,
     "probe_scaling": [
