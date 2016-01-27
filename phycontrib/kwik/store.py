@@ -155,11 +155,11 @@ def create_cluster_store(model, selector=None, context=None):
                            sample_rate=model.sample_rate,
                            )
         tr = tr - np.mean(tr, axis=0)
-        return [tr]
+        return [Bunch(traces=tr)]
     model.traces = traces
 
     def spikes_traces(interval, traces):
-        traces = traces[0]
+        traces = traces[0].traces
         return extract_spikes(traces, interval,
                               sample_rate=model.sample_rate,
                               spike_times=model.spike_times,
