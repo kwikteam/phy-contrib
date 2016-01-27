@@ -205,6 +205,12 @@ def create_cluster_store(model, selector=None, context=None):
         return int(wa.argmax())
     model.best_channel = best_channel
 
+    def best_channels(cluster_ids):
+        channels = [model.best_channel(cluster_id)
+                    for cluster_id in cluster_ids]
+        return list(set(channels))
+    model.best_channels = best_channels
+
     @context.memcache
     def best_channel_position(cluster_id):
         cha = model.best_channel(cluster_id)

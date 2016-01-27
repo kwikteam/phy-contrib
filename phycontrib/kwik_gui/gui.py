@@ -35,7 +35,7 @@ def add_waveform_view(gui):
                      channel_positions=model.channel_positions,
                      n_samples=model.n_samples_waveforms,
                      waveform_lim=model.waveform_lim(),
-                     best_channels=model.best_channels_multiple,
+                     best_channels=model.best_channels,
                      )
     v.attach(gui)
     return v
@@ -132,12 +132,7 @@ class KwikGUIPlugin(IPlugin):
 
             gui = create_kwik_gui(path, plugins=plugins)
 
-            # Show the GUI.
             gui.show()
-
-            # Start the Qt event loop.
             run_app()
-
-            # Close the GUI.
             gui.close()
             del gui
