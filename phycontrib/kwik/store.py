@@ -45,7 +45,7 @@ def create_cluster_store(model, selector=None, context=None):
         'waveform_lim': 1000,  # used to compute the waveform bounds
         'feature_lim': 1000,  # used to compute the waveform bounds
     }
-    max_n_similar_clusters = 20
+    max_n_similar_clusters = None  # show all similar clusters
 
     def select(cluster_id, n=None):
         assert isinstance(cluster_id, int)
@@ -240,7 +240,9 @@ def create_cluster_store(model, selector=None, context=None):
         dist = np.sum(dist, axis=1) ** .5
         assert dist.shape == (len(clusters),)
         # Closest clusters.
-        ind = np.argsort(dist)[:max_n_similar_clusters]
+        ind = np.argsort(dist)
+        if max_n_similar_clusters:
+            ind = ind[:max_n_similar_clusters]
         return [(int(clusters[i]), float(dist[i])) for i in ind]
     model.probe_distance = probe_distance
 
