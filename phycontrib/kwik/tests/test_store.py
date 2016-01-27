@@ -68,10 +68,9 @@ def test_create_cluster_store(model, context):
     assert 0 < model.waveform_lim() < 3
     assert 0 < model.feature_lim() < 3
 
-    # Statistimodel.
-    assert 1 <= len(model.best_channels(1)) <= nc
-    assert 1 <= len(model.best_channels_multiple([1, 2])) <= nc
-    assert 0 < model.max_waveform_amplitude(1) < 1
-    assert model.mean_masked_features_score(1, 2) > 0
-
-    assert np.array(model.most_similar_clusters(1)).shape == (3, 2)
+    # Statistics.
+    assert model.waveforms_amplitude(1).shape == (nc,)
+    assert np.all(model.waveforms_amplitude(1) >= 0)
+    assert model.best_channel(1) >= 0
+    assert len(model.best_channel_position(1)) == 2
+    assert np.array(model.closest_clusters(1)).shape == (3, 2)
