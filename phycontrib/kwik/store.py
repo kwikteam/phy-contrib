@@ -217,6 +217,10 @@ def create_cluster_store(model, selector=None, context=None):
         return tuple(model.channel_positions[cha])
     model.best_channel_position = best_channel_position
 
+    def probe_depth(cluster_id):
+        return model.best_channel_position(cluster_id)[1]
+    model.probe_depth = probe_depth
+
     @context.memcache
     @context.cache
     def probe_distance(cluster_id):
