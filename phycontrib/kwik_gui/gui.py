@@ -61,6 +61,7 @@ def add_feature_view(gui):
                     n_channels=model.n_channels,
                     n_features_per_channel=model.n_features_per_channel,
                     feature_lim=model.feature_lim(),
+                    best_channels=model.channels_by_amplitude,
                     )
     v.attach(gui)
     return v

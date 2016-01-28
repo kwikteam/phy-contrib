@@ -211,6 +211,11 @@ def create_cluster_store(model, selector=None, context=None):
         return list(set(channels))
     model.best_channels = best_channels
 
+    def channels_by_amplitude(cluster_ids):
+        wa = model.waveforms_amplitude(cluster_ids[0])
+        return np.argsort(wa)[::-1].tolist()
+    model.channels_by_amplitude = channels_by_amplitude
+
     @context.memcache
     def best_channel_position(cluster_id):
         cha = model.best_channel(cluster_id)
