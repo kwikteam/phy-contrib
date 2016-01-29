@@ -45,7 +45,7 @@ def create_cluster_store(model, selector=None, context=None):
         'waveform_lim': 1000,  # used to compute the waveform bounds
         'feature_lim': 1000,  # used to compute the waveform bounds
     }
-    max_n_similar_clusters = 50  # show all similar clusters
+    max_n_similar_clusters = 100
 
     def select(cluster_id, n=None):
         assert isinstance(cluster_id, int)
