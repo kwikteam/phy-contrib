@@ -45,7 +45,7 @@ def create_cluster_store(model, selector=None, context=None):
         'waveform_lim': 1000,  # used to compute the waveform bounds
         'feature_lim': 1000,  # used to compute the waveform bounds
     }
-    max_n_similar_clusters = None  # show all similar clusters
+    max_n_similar_clusters = 50  # show all similar clusters
 
     def select(cluster_id, n=None):
         assert isinstance(cluster_id, int)
@@ -191,6 +191,7 @@ def create_cluster_store(model, selector=None, context=None):
     # Statistics.
     # -------------------------------------------------------------------------
 
+    @context.cache
     @context.memcache
     def waveforms_amplitude(cluster_id):
         mm = model.mean_masks(cluster_id)
@@ -199,6 +200,7 @@ def create_cluster_store(model, selector=None, context=None):
         return get_waveform_amplitude(mm, mw)
     model.waveforms_amplitude = waveforms_amplitude
 
+    @context.cache
     @context.memcache
     def best_channel(cluster_id):
         wa = model.waveforms_amplitude(cluster_id)
@@ -222,6 +224,7 @@ def create_cluster_store(model, selector=None, context=None):
         return tuple(model.channel_positions[cha])
     model.best_channel_position = best_channel_position
 
+    @context.cache
     def probe_depth(cluster_id):
         return model.best_channel_position(cluster_id)[1]
     model.probe_depth = probe_depth
