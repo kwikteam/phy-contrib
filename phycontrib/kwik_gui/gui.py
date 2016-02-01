@@ -8,19 +8,16 @@
 #------------------------------------------------------------------------------
 
 import logging
+import os.path as op
+import shutil
 
 import click
 
 from phy import IPlugin
 from phy.gui import create_app, create_gui, run_app
-from phy.cluster.manual.gui_component import ManualClustering
-from phy.cluster.manual.views import (WaveformView,
-                                      TraceView,
-                                      FeatureView,
-                                      CorrelogramView,
-                                      )
+from phy.cluster.manual.controller import Controller
 
-from phycontrib.kwik import create_model
+from phycontrib.kwik import KwikModel
 
 logger = logging.getLogger(__name__)
 
@@ -29,78 +26,56 @@ logger = logging.getLogger(__name__)
 # Kwik GUI
 #------------------------------------------------------------------------------
 
-def add_waveform_view(gui):
-    model = gui.model
-    v = WaveformView(waveforms=model.waveforms,
-                     channel_positions=model.channel_positions,
-                     n_samples=model.n_samples_waveforms,
-                     waveform_lim=model.waveform_lim(),
-                     best_channels=model.best_channels,
-                     )
-    v.attach(gui)
-    return v
+def _backup(path):
+    """Backup a file."""
+    path_backup = path + '.bak'
+    if not op.exists(path_backup):
+        logger.info("Backup `%s`.".format(path_backup))
+        shutil.copy(path, path_backup)
 
 
-def add_trace_view(gui):
-    model = gui.model
-    v = TraceView(traces=model.traces,
-                  spikes=model.spikes_traces,
-                  sample_rate=model.sample_rate,
-                  duration=model.duration,
-                  n_channels=model.n_channels,
-                  )
-    v.attach(gui)
-    return v
+class KwikController(Controller):
+    def __init__(self, path):
+        path = op.realpath(op.expanduser(path))
+        _backup(path)
+        self.cache_dir = op.join(op.dirname(path), '.phy')
+        self.model = KwikModel(path)
+        super(KwikController, self).__init__()
 
+    def _init_data(self):
+        m = self.model
+        self.spike_times = m.spike_times
 
-def add_feature_view(gui):
-    model = gui.model
-    v = FeatureView(features=model.features,
-                    background_features=model.background_features(),
-                    spike_times=model.spike_times,
-                    n_channels=model.n_channels,
-                    n_features_per_channel=model.n_features_per_channel,
-                    feature_lim=model.feature_lim(),
-                    best_channels=model.channels_by_amplitude,
-                    )
-    v.attach(gui)
-    return v
+        self.spike_clusters = m.spike_clusters
+        self.cluster_groups = m.cluster_groups
+        self.cluster_ids = m.cluster_ids
 
+        self.channel_positions = m.channel_positions
+        self.n_samples_waveforms = m.n_samples_waveforms
+        self.n_channels = m.n_channels
+        self.n_features_per_channel = m.n_features_per_channel
+        self.sample_rate = m.sample_rate
+        self.duration = m.duration
 
-def add_correlogram_view(gui):
-    model = gui.model
-    v = CorrelogramView(spike_times=model.spike_times,
-                        spike_clusters=model.spike_clusters,
-                        sample_rate=model.sample_rate,
-                        )
-    v.attach(gui)
-    return v
+        self.all_masks = m.all_masks
+        self.all_waveforms = m.all_waveforms
+        self.all_features = m.all_features
+        self.all_traces = m.all_traces
 
 
 def create_kwik_gui(path, plugins=None):
-    # Backup the kwik file, create the model, context, and selector.
-    model = create_model(path)
-
+    controller = KwikController(path)
+    model = controller.model
     # Create the GUI.
     gui = create_gui(name='KwikGUI',
                      subtitle=model.kwik_path,
                      plugins=plugins,
                      )
-    gui.model = model
-
-    # Create the manual clustering.
-    mc = ManualClustering(model.spike_clusters,
-                          model.spikes_per_cluster,
-                          similarity=model.probe_distance,
-                          cluster_groups=model.cluster_groups,)
-    mc.attach(gui)
-    gui.manual_clustering = mc
-
-    # Add the views.
-    add_waveform_view(gui)
-    add_feature_view(gui)
-    add_trace_view(gui)
-    add_correlogram_view(gui)
+    controller.set_manual_clustering(gui)
+    controller.add_waveform_view(gui)
+    controller.add_feature_view(gui)
+    controller.add_trace_view(gui)
+    controller.add_correlogram_view(gui)
 
     # Save.
     @gui.connect_
