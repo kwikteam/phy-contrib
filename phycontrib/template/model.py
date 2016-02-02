@@ -135,7 +135,10 @@ class TemplateModel(object):
 
         self.sample_rate = sample_rate
         self.duration = n_samples_t / float(self.sample_rate)
+
         self.spike_times = spike_samples / float(self.sample_rate)
+        assert np.all(np.diff(self.spike_times) >= 0)
+
         self.spike_clusters = spike_clusters
         self.cluster_ids = np.unique(self.spike_clusters)
         n_clusters = len(self.cluster_ids)
