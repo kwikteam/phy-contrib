@@ -121,7 +121,7 @@ class MaskLoader(object):
 
 
 class TemplateController(Controller):
-    def __init__(self, dat_path, **kwargs):
+    def __init__(self, dat_path=None, **kwargs):
         path = op.realpath(op.expanduser(dat_path))
         self.cache_dir = op.join(op.dirname(path), '.phy')
         self.dat_path = dat_path
@@ -269,10 +269,15 @@ class TemplateController(Controller):
         assert template.ndim == 3
         masks = self.template_masks[cluster_id][np.newaxis, ...]
         assert masks.ndim == 2
+        # Find mean amplitude.
+        spike_ids = self._select_spikes(cluster_id, 100)
+        mean_amp = self.all_amplitudes[spike_ids].mean()
+        tmp = template * mean_amp
         template_b = Bunch(spike_ids=np.array([cluster_id]),
                            spike_clusters=np.array([cluster_id]),
-                           data=template,
+                           data=tmp,
                            masks=masks,
+                           alpha=1.,
                            )
         return [waveforms_b, template_b]
 
