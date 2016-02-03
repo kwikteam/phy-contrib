@@ -86,6 +86,8 @@ class TemplateController(Controller):
         self.sample_rate = m.sample_rate
         self.duration = m.duration
 
+        self.templates_unw = m.templates_unw
+
         self.all_masks = m.all_masks
         self.all_waveforms = m.all_waveforms
         self.all_features = m.all_features
@@ -157,7 +159,7 @@ class TemplateController(Controller):
         d.spike_clusters = self.spike_clusters[spike_ids]
         return d
 
-    def traces(self, interval):
+    def get_traces(self, interval):
         """Load traces and spikes in an interval."""
         tr = select_traces(self.all_traces, interval,
                            sample_rate=self.sample_rate,
@@ -211,7 +213,7 @@ class TemplateController(Controller):
         tf = m.template_features
         m = self._data_lim(tf, 100)
         view = FeatureTemplateView(coords=self.get_template_features,
-                                   data_bounds=[-m, -m, m, m],
+                                   # data_bounds=[-m, -m, m, m],
                                    )
         view.attach(gui)
         return view
