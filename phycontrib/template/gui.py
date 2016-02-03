@@ -258,7 +258,27 @@ class TemplateController(Controller):
         self.get_template_features = ctx.cache(self.get_template_features)
 
     @concat_per_cluster
+    def get_waveforms(self, cluster_id):
+        # Waveforms.
+        waveforms_b = self._select_data(cluster_id,
+                                        self.all_waveforms,
+                                        100,  # TODO
+                                        )
+        # Templates.
+        template = self.templates_unw[cluster_id][np.newaxis, ...]
+        assert template.ndim == 3
+        masks = self.template_masks[cluster_id][np.newaxis, ...]
+        assert masks.ndim == 2
+        template_b = Bunch(spike_ids=np.array([cluster_id]),
+                           spike_clusters=np.array([cluster_id]),
+                           data=template,
+                           masks=masks,
+                           )
+        return [waveforms_b, template_b]
+
+    @concat_per_cluster
     def get_features(self, cluster_id):
+        # Overriden to take into account the sparse structure.
         spike_ids = self._select_spikes(cluster_id, 1000)
         nc = self.n_channels
         nfpc = self.n_features_per_channel
