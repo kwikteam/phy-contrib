@@ -41,9 +41,9 @@ def _create_loader_file():
                 """).lstrip())
 
 
-def _copy_kwik_gui_state():
+def _copy_gui_state(gui_name, module_name):
     """Copy the state.json file."""
-    gui_dir = op.expanduser('~/.phy/KwikGUI/')
+    gui_dir = op.expanduser('~/.phy/%s/' % gui_name)
     if not op.exists(gui_dir):
         os.makedirs(gui_dir)
     # Create the script if it doesn't already exist.
@@ -51,9 +51,15 @@ def _copy_kwik_gui_state():
     if op.exists(path):
         return
     curdir = op.dirname(op.realpath(__file__))
-    from_path = op.join(curdir, 'phycontrib', 'kwik_gui',
+    from_path = op.join(curdir, 'phycontrib', module_name,
                         'static', 'state.json')
+    print("Copy %s to %s" % (from_path, path))
     shutil.copy(from_path, path)
+
+
+def _copy_all_gui_states():
+    _copy_gui_state('KwikGUI', 'kwik_gui')
+    _copy_gui_state('TemplateGUI', 'template')
 
 
 class develop(_develop):
@@ -61,7 +67,7 @@ class develop(_develop):
         """Create the loader file once python setup.py develop succeeds."""
         _develop.run(self)
         _create_loader_file()
-        _copy_kwik_gui_state()
+        _copy_all_gui_states()
 
 
 class install(_install):
@@ -69,7 +75,7 @@ class install(_install):
     def run(self):
         _install.run(self)
         _create_loader_file()
-        _copy_kwik_gui_state()
+        _copy_all_gui_states()
 
 
 setup(
