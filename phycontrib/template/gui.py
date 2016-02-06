@@ -74,7 +74,8 @@ class FeatureTemplateView(ScatterView):
 
 filenames = {
     'amplitudes': 'amplitudes.npy',
-    'spike_clusters': 'clusterIDs.npy',
+    'spike_templates': 'clusterIDs.npy',
+    'spike_clusters': 'clusterIDs.npy',  # TODO
     'templates': 'templates.npy',
     'spike_samples': 'spikeTimes.npy',
     'channel_mapping': 'chanMap0ind.npy',
@@ -143,6 +144,12 @@ class TemplateController(Controller):
         spike_clusters = read_array('spike_clusters').squeeze()
         spike_clusters = spike_clusters.astype(np.int32)
         assert spike_clusters.shape == (n_spikes,)
+        self.spike_clusters = spike_clusters
+
+        spike_templates = read_array('spike_templates').squeeze()
+        spike_templates = spike_templates.astype(np.int32)
+        assert spike_templates.shape == (n_spikes,)
+        self.spike_templates = spike_templates
 
         spike_samples = read_array('spike_samples').squeeze()
         assert spike_samples.shape == (n_spikes,)
@@ -151,6 +158,7 @@ class TemplateController(Controller):
         templates[np.isnan(templates)] = 0
         templates = np.transpose(templates, (2, 1, 0))
         n_templates, n_samples_templates, n_channels = templates.shape
+        self.n_templates = n_templates
 
         channel_mapping = read_array('channel_mapping').squeeze()
         channel_mapping = channel_mapping.astype(np.int32)
@@ -185,16 +193,15 @@ class TemplateController(Controller):
         self.templates = templates
         self.n_samples_templates = n_samples_templates
         self.template_lim = np.max(np.abs(self.templates))
-        self.n_templates = len(self.templates)
 
         self.duration = n_samples_t / float(self.sample_rate)
 
         self.spike_times = spike_samples / float(self.sample_rate)
         assert np.all(np.diff(self.spike_times) >= 0)
 
-        self.spike_clusters = spike_clusters
         self.cluster_ids = np.unique(self.spike_clusters)
         n_clusters = len(self.cluster_ids)
+
         self.channel_positions = channel_positions
         self.all_traces = traces
 
@@ -247,6 +254,11 @@ class TemplateController(Controller):
         wmi = np.linalg.inv(self.whitening_matrix / 200.)
         self.templates_unw = np.dot(self.templates, wmi)
 
+    def get_cluster_templates(self, cluster_id):
+        spike_ids = self.spikes_per_cluster(cluster_id)
+        st = self.spike_templates[spike_ids]
+        return np.bincount(st, minlength=self.n_templates)
+
     def get_background_features(self):
         # Disable for now
         pass
@@ -256,6 +268,7 @@ class TemplateController(Controller):
         ctx = self.context
         self.get_amplitudes = ctx.cache(self.get_amplitudes)
         self.get_template_features = ctx.cache(self.get_template_features)
+        self.get_cluster_templates = ctx.memcache(self.get_cluster_templates)
 
     @concat_per_cluster
     def get_waveforms(self, cluster_id):
