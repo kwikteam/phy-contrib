@@ -110,15 +110,24 @@ def get_masks(templates):
 
 
 class MaskLoader(object):
-    def __init__(self, cluster_masks, spike_clusters):
-        self._spike_clusters = spike_clusters
+    def __init__(self, cluster_masks, spike_templates):
+        self._spike_templates = spike_templates
         self._cluster_masks = cluster_masks
-        self.shape = (len(spike_clusters), cluster_masks.shape[1])
+        self.shape = (len(spike_templates), cluster_masks.shape[1])
 
     def __getitem__(self, item):
         # item contains spike ids
-        clu = self._spike_clusters[item]
+        clu = self._spike_templates[item]
         return self._cluster_masks[clu]
+
+
+def _densify(rows, arr, ind, ncols):
+    ns = len(rows)
+    nt = ind.shape[1]
+    out = np.zeros((ns,) + arr.shape[1:-1] + (ncols,))
+    out[np.arange(ns)[:, np.newaxis], ..., ind] = arr[rows[:, np.newaxis], ...,
+                                                      np.arange(nt)]
+    return out
 
 
 class TemplateController(Controller):
@@ -256,7 +265,7 @@ class TemplateController(Controller):
         self.all_waveforms = waveforms
 
         self.template_masks = get_masks(templates)
-        self.all_masks = MaskLoader(self.template_masks, spike_clusters)
+        self.all_masks = MaskLoader(self.template_masks, self.spike_templates)
 
         # TODO
         self.cluster_groups = {c: None for c in range(n_clusters)}
@@ -308,16 +317,14 @@ class TemplateController(Controller):
     def get_features(self, cluster_id):
         # Overriden to take into account the sparse structure.
         spike_ids = self._select_spikes(cluster_id, 1000)
+        st = self.spike_templates[spike_ids]
         nc = self.n_channels
         nfpc = self.n_features_per_channel
         ns = len(spike_ids)
-        shape = (ns, nc, nfpc)
-        f = np.zeros(shape)
-        # Sparse channels.
-        ch = self.features_ind[:, cluster_id]
-        # Populate the dense features array.
-        f[:, ch, :] = np.transpose(self.all_features[spike_ids, :, :],
-                                   (0, 2, 1))
+        f = _densify(spike_ids, self.all_features,
+                     self.features_ind[:, st].T, self.n_channels)
+        f = np.transpose(f, (0, 2, 1))
+        assert f.shape == (ns, nc, nfpc)
         b = Bunch()
         b.data = f
         b.spike_ids = spike_ids
@@ -338,13 +345,8 @@ class TemplateController(Controller):
         tf = self.template_features
         tfi = self.template_features_ind
         # For each spike, the non-zero columns.
-        sim_temp = tfi[self.spike_templates[spike_ids]]
-        ns = len(spike_ids)
-        nt = tfi.shape[1]
-        out = np.zeros((ns, self.n_templates))
-        out[np.arange(ns)[:, np.newaxis],
-            sim_temp] = tf[spike_ids[:, np.newaxis], np.arange(nt)]
-        return out
+        ind = tfi[self.spike_templates[spike_ids]]
+        return _densify(spike_ids, tf, ind, self.n_templates)
 
     def get_cluster_pair_features(self, ci, cj):
         si = self._select_spikes(ci)
