@@ -18,7 +18,7 @@ from phy.cluster.manual.controller import Controller
 from phy.cluster.manual.views import (select_traces, ScatterView)
 
 from phy.gui import create_gui
-from phy.io.array import concat_per_cluster
+from phy.io.array import concat_per_cluster, _spikes_per_cluster
 from phy.traces import SpikeLoader, WaveformLoader
 from phy.traces.filter import apply_filter, bandpass_filter
 from phy.utils import Bunch
@@ -273,11 +273,13 @@ class TemplateController(Controller):
     def _init_context(self):
         super(TemplateController, self)._init_context()
         ctx = self.context
-        self.get_amplitudes = ctx.cache(self.get_amplitudes)
-        self.get_template_features = ctx.cache(self.get_template_features)
+        self.get_amplitudes = concat_per_cluster(
+            ctx.cache(self.get_amplitudes))
         self.get_cluster_templates = ctx.memcache(self.get_cluster_templates)
 
-    @concat_per_cluster
+        self.get_cluster_pair_features = ctx.memcache(
+            self.get_cluster_pair_features)
+
     def get_waveforms(self, cluster_id):
         # Waveforms.
         waveforms_b = self._select_data(cluster_id,
@@ -304,7 +306,6 @@ class TemplateController(Controller):
                            )
         return [waveforms_b, template_b]
 
-    @concat_per_cluster
     def get_features(self, cluster_id):
         # Overriden to take into account the sparse structure.
         spike_ids = self._select_spikes(cluster_id, 1000)
@@ -325,7 +326,6 @@ class TemplateController(Controller):
         b.masks = self.all_masks[spike_ids]
         return b
 
-    @concat_per_cluster
     def get_amplitudes(self, cluster_id):
         spike_ids = self._select_spikes(cluster_id, 10000)
         d = Bunch()
@@ -335,29 +335,45 @@ class TemplateController(Controller):
         d.y = self.all_amplitudes[spike_ids]
         return d
 
-    def get_template_features(self, cluster_ids):
-        template_features = self.template_features
-        template_features_ind = self.template_features_ind
+    def _get_template_features(self, spike_ids):
+        tf = self.template_features
+        tfi = self.template_features_ind
+        # For each spike, the non-zero columns.
+        sim_temp = tfi[self.spike_templates[spike_ids]]
+        ns = len(spike_ids)
+        nt = tfi.shape[1]
+        out = np.zeros((ns, self.n_templates))
+        out[np.arange(ns)[:, np.newaxis],
+            sim_temp] = tf[spike_ids[:, np.newaxis], np.arange(nt)]
+        return out
+
+    def get_cluster_pair_features(self, ci, cj):
+        si = self._select_spikes(ci)
+        sj = self._select_spikes(cj)
+
+        ni = self.get_cluster_templates(ci)
+        nj = self.get_cluster_templates(cj)
+
+        ti = self._get_template_features(si)
+        x0 = np.sum(ti * ni[np.newaxis, :], axis=1) / ni.sum()
+        y0 = np.sum(ti * nj[np.newaxis, :], axis=1) / nj.sum()
+
+        tj = self._get_template_features(sj)
+        x1 = np.sum(tj * ni[np.newaxis, :], axis=1) / ni.sum()
+        y1 = np.sum(tj * nj[np.newaxis, :], axis=1) / nj.sum()
+
         d = Bunch()
+        d.x = np.hstack((x0, x1))
+        d.y = np.hstack((y0, y1))
+        d.spike_ids = np.hstack((si, sj))
+        d.spike_clusters = self.spike_clusters[d.spike_ids]
+        return d
+
+    def get_cluster_features(self, cluster_ids):
         if len(cluster_ids) < 2:
             return None
         cx, cy = map(int, cluster_ids[:2])
-        sim_x = template_features_ind[cx].tolist()
-        sim_y = template_features_ind[cy].tolist()
-        if cx not in sim_y or cy not in sim_x:
-            return None
-        sxy = sim_x.index(cy)
-        syx = sim_y.index(cx)
-        spikes_x = self._select_spikes(cx)
-        spikes_y = self._select_spikes(cy)
-        spike_ids = np.hstack([spikes_x, spikes_y])
-        d.x = np.hstack([template_features[spikes_x, 0],
-                         template_features[spikes_y, syx]])
-        d.y = np.hstack([template_features[spikes_x, sxy],
-                         template_features[spikes_y, 0]])
-        d.spike_ids = spike_ids
-        d.spike_clusters = self.spike_clusters[spike_ids]
-        return d
+        return self.get_cluster_pair_features(cx, cy)
 
     def get_traces(self, interval):
         """Load traces and spikes in an interval."""
@@ -383,9 +399,24 @@ class TemplateController(Controller):
                 Bunch(traces=tr_sub, color=(.25, .25, .25, .75))]
 
     def similarity(self, cluster_id):
-        n = self.template_features_ind.shape[1]
-        sim0 = self.template_features_ind[cluster_id]
-        sim = [(int(c), -n + i) for i, c in enumerate(sim0)]
+        sim = []
+        if self.template_features_ind is not None:
+            # Find the templates corresponding to the cluster.
+            count = self.get_cluster_templates(cluster_id)
+            sim_templates = np.argsort(count)[::-1]
+            # Only keep templates corresponding to the cluster.
+            n = np.sum(count > 0)
+            sim_templates = sim_templates[:n]
+            # Sort them by decreasing size.
+            # Add the similar templates.
+            sim0 = []
+            for tid in sim_templates:
+                sim0.extend([tmp for tmp in self.template_features_ind[tid]
+                             if tmp not in sim0])
+            n = len(sim0)
+            sim0 = [(int(c), -n + i) for i, c in enumerate(sim0)]
+            sim.extend(sim0)
+
         sim2 = self.get_close_clusters(cluster_id)
         sim2 = [_ for _ in sim2 if _[0] not in sim0]
         sim.extend(sim2)
@@ -408,7 +439,7 @@ class TemplateController(Controller):
         return view
 
     def add_feature_template_view(self, gui):
-        view = FeatureTemplateView(coords=self.get_template_features,
+        view = FeatureTemplateView(coords=self.get_cluster_features,
                                    )
         view.attach(gui)
         return view
