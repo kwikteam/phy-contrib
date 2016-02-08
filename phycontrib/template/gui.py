@@ -140,6 +140,7 @@ class TemplateController(Controller):
 
         amplitudes = read_array('amplitudes').squeeze()
         n_spikes, = amplitudes.shape
+        self.n_spikes = n_spikes
 
         spike_clusters = read_array('spike_clusters').squeeze()
         spike_clusters = spike_clusters.astype(np.int32)
@@ -168,22 +169,45 @@ class TemplateController(Controller):
                                   read_array('channel_positions_y')]
         assert channel_positions.shape == (n_channels, 2)
 
-        all_features = np.load(filenames['features'], mmap_mode='r')
-        features_ind = read_array('features_ind').astype(np.int32)
+        if op.exists(filenames['features']):
+            all_features = np.load(filenames['features'], mmap_mode='r')
+            features_ind = read_array('features_ind').astype(np.int32)
+        else:
+            all_features = None
+            features_ind = None
 
         self.all_features = all_features
         self.features_ind = features_ind
+        self.n_features_per_channel = 3
 
-        template_features = np.load(filenames['template_features'],
-                                    mmap_mode='r')
-        template_features_ind = read_array('template_features_ind'). \
-            astype(np.int32)
-        template_features_ind = template_features_ind.T.copy()
+        # Check sparse features arrays shapes.
+        assert all_features.ndim == 3
+        n_loc_chan = all_features.shape[2]
+        assert all_features.shape == (self.n_spikes,
+                                      self.n_features_per_channel,
+                                      n_loc_chan,
+                                      )
+        assert features_ind.shape == (n_loc_chan, self.n_templates)
+
+        if op.exists(filenames['template_features']):
+            template_features = np.load(filenames['template_features'],
+                                        mmap_mode='r')
+            template_features_ind = read_array('template_features_ind'). \
+                astype(np.int32)
+            template_features_ind = template_features_ind.T.copy()
+            n_sim_tem = template_features.shape[1]
+            assert template_features.shape == (n_spikes, n_sim_tem)
+            assert template_features_ind.shape == (n_templates, n_sim_tem)
+        else:
+            template_features = None
+            template_features_ind = None
+
+        self.template_features_ind = template_features_ind
+        self.template_features = template_features
 
         self.n_channels = n_channels
         # Take dead channels into account.
         traces = _concatenate_virtual_arrays([traces], channel_mapping)
-        self.n_spikes = n_spikes
 
         # Amplitudes
         self.all_amplitudes = amplitudes
@@ -193,6 +217,11 @@ class TemplateController(Controller):
         self.templates = templates
         self.n_samples_templates = n_samples_templates
         self.template_lim = np.max(np.abs(self.templates))
+
+        # Unwhiten the templates.
+        self.whitening_matrix = read_array('whitening_matrix')
+        wmi = np.linalg.inv(self.whitening_matrix / 200.)
+        self.templates_unw = np.dot(self.templates, wmi)
 
         self.duration = n_samples_t / float(self.sample_rate)
 
@@ -204,8 +233,6 @@ class TemplateController(Controller):
 
         self.channel_positions = channel_positions
         self.all_traces = traces
-
-        self.whitening_matrix = read_array('whitening_matrix')
 
         # Filter the waveforms.
         order = 3
@@ -231,28 +258,8 @@ class TemplateController(Controller):
         self.template_masks = get_masks(templates)
         self.all_masks = MaskLoader(self.template_masks, spike_clusters)
 
-        self.n_features_per_channel = 3
         # TODO
         self.cluster_groups = {c: None for c in range(n_clusters)}
-
-        # Check sparse features arrays shapes.
-        assert all_features.ndim == 3
-        n_loc_chan = all_features.shape[2]
-        assert all_features.shape == (self.n_spikes,
-                                      self.n_features_per_channel,
-                                      n_loc_chan,
-                                      )
-        assert features_ind.shape == (n_loc_chan, self.n_templates)
-
-        n_sim_tem = template_features.shape[1]
-        assert template_features.shape == (n_spikes, n_sim_tem)
-        assert template_features_ind.shape == (n_templates, n_sim_tem)
-        self.template_features_ind = template_features_ind
-        self.template_features = template_features
-
-        # Unwhiten the templates.
-        wmi = np.linalg.inv(self.whitening_matrix / 200.)
-        self.templates_unw = np.dot(self.templates, wmi)
 
     def get_cluster_templates(self, cluster_id):
         spike_ids = self.spikes_per_cluster(cluster_id)
@@ -417,11 +424,15 @@ def create_template_gui(dat_path=None, plugins=None, **kwargs):
                      )
     controller.set_manual_clustering(gui)
     controller.add_waveform_view(gui)
-    controller.add_feature_view(gui)
-    controller.add_feature_template_view(gui)
+
     controller.add_amplitude_view(gui)
     controller.add_trace_view(gui)
     controller.add_correlogram_view(gui)
+
+    if controller.all_features is not None:
+        controller.add_feature_view(gui)
+    if controller.template_features is not None:
+        controller.add_feature_template_view(gui)
 
     # Save.
     @gui.connect_
