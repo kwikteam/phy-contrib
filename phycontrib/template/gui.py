@@ -18,7 +18,7 @@ from phy.cluster.manual.controller import Controller
 from phy.cluster.manual.views import (select_traces, ScatterView)
 
 from phy.gui import create_gui
-from phy.io.array import concat_per_cluster, _spikes_per_cluster
+from phy.io.array import concat_per_cluster
 from phy.traces import SpikeLoader, WaveformLoader
 from phy.traces.filter import apply_filter, bandpass_filter
 from phy.utils import Bunch
@@ -275,9 +275,8 @@ class TemplateController(Controller):
         ctx = self.context
         self.get_amplitudes = concat_per_cluster(
             ctx.cache(self.get_amplitudes))
-        self.get_cluster_templates = ctx.memcache(self.get_cluster_templates)
-
-        self.get_cluster_pair_features = ctx.memcache(
+        self.get_cluster_templates = ctx.cache(self.get_cluster_templates)
+        self.get_cluster_pair_features = ctx.cache(
             self.get_cluster_pair_features)
 
     def get_waveforms(self, cluster_id):
@@ -414,12 +413,11 @@ class TemplateController(Controller):
                 sim0.extend([tmp for tmp in self.template_features_ind[tid]
                              if tmp not in sim0])
             n = len(sim0)
-            sim0 = [(int(c), -n + i) for i, c in enumerate(sim0)]
-            sim.extend(sim0)
+            sim.extend([(int(c), -n + i) for i, c in enumerate(sim0)])
 
-        sim2 = self.get_close_clusters(cluster_id)
-        sim2 = [_ for _ in sim2 if _[0] not in sim0]
-        sim.extend(sim2)
+        sim1 = self.get_close_clusters(cluster_id)
+        sim1 = [_ for _ in sim1 if _[0] not in sim0]
+        sim.extend(sim1)
         return sim
 
     def set_manual_clustering(self, gui):
