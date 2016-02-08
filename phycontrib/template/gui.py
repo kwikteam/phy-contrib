@@ -284,17 +284,20 @@ class TemplateController(Controller):
                                         self.all_waveforms,
                                         100,  # TODO
                                         )
+        # Find the templates corresponding to the cluster.
+        template_ids = np.nonzero(self.get_cluster_templates(cluster_id))[0]
         # Templates.
-        template = self.templates_unw[cluster_id][np.newaxis, ...]
-        assert template.ndim == 3
-        masks = self.template_masks[cluster_id][np.newaxis, ...]
+        templates = self.templates_unw[template_ids]
+        assert templates.ndim == 3
+        masks = self.template_masks[template_ids]
         assert masks.ndim == 2
+        assert templates.shape[0] == masks.shape[0]
         # Find mean amplitude.
-        spike_ids = self._select_spikes(cluster_id, 100)
+        spike_ids = waveforms_b.spike_ids
         mean_amp = self.all_amplitudes[spike_ids].mean()
-        tmp = template * mean_amp
-        template_b = Bunch(spike_ids=np.array([cluster_id]),
-                           spike_clusters=np.array([cluster_id]),
+        tmp = templates * mean_amp
+        template_b = Bunch(spike_ids=template_ids,
+                           spike_clusters=template_ids,
                            data=tmp,
                            masks=masks,
                            alpha=1.,
@@ -364,7 +367,7 @@ class TemplateController(Controller):
         tr = tr - np.mean(tr, axis=0)
 
         a, b = self.spike_times.searchsorted(interval)
-        sc = self.spike_clusters[a:b]
+        sc = self.spike_templates[a:b]
 
         # Remove templates.
         tr_sub = subtract_templates(tr,
