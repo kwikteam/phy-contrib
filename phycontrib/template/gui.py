@@ -74,19 +74,18 @@ class FeatureTemplateView(ScatterView):
 
 filenames = {
     'amplitudes': 'amplitudes.npy',
-    'spike_templates': 'clusterIDs.npy',
-    'spike_clusters': 'clusterIDs.npy',  # TODO
+    'spike_templates': 'spike_templates.npy',
+    'spike_clusters': 'spike_templates.npy',  # TODO
     'templates': 'templates.npy',
-    'spike_samples': 'spikeTimes.npy',
-    'channel_mapping': 'chanMap0ind.npy',
-    'channel_positions_x': 'xcoords.npy',
-    'channel_positions_y': 'ycoords.npy',
-    'whitening_matrix': 'whiteningMatrix.npy',
+    'spike_samples': 'spike_times.npy',
+    'channel_mapping': 'channel_map.npy',
+    'channel_positions': 'channel_positions.npy',
+    'whitening_matrix': 'whitening_mat.npy',
 
-    'features': 'pcFeatures.npy',
-    'features_ind': 'pcFeatureInds.npy',
-    'template_features': 'templateFeatures.npy',
-    'template_features_ind': 'templateFeatureInds.npy',
+    'features': 'pc_features.npy',
+    'features_ind': 'pc_feature_ind.npy',
+    'template_features': 'template_features.npy',
+    'template_features_ind': 'template_feature_ind.npy',
 }
 
 
@@ -166,7 +165,7 @@ class TemplateController(Controller):
 
         templates = read_array('templates')
         templates[np.isnan(templates)] = 0
-        templates = np.transpose(templates, (2, 1, 0))
+        # templates = np.transpose(templates, (2, 1, 0))
         n_templates, n_samples_templates, n_channels = templates.shape
         self.n_templates = n_templates
 
@@ -174,8 +173,7 @@ class TemplateController(Controller):
         channel_mapping = channel_mapping.astype(np.int32)
         assert channel_mapping.shape == (n_channels,)
 
-        channel_positions = np.c_[read_array('channel_positions_x'),
-                                  read_array('channel_positions_y')]
+        channel_positions = read_array('channel_positions')
         assert channel_positions.shape == (n_channels, 2)
 
         if op.exists(filenames['features']):
@@ -196,14 +194,14 @@ class TemplateController(Controller):
                                       self.n_features_per_channel,
                                       n_loc_chan,
                                       )
-        assert features_ind.shape == (n_loc_chan, self.n_templates)
+        assert features_ind.shape == (self.n_templates, n_loc_chan)
 
         if op.exists(filenames['template_features']):
             template_features = np.load(filenames['template_features'],
                                         mmap_mode='r')
             template_features_ind = read_array('template_features_ind'). \
                 astype(np.int32)
-            template_features_ind = template_features_ind.T.copy()
+            template_features_ind = template_features_ind.copy()
             n_sim_tem = template_features.shape[1]
             assert template_features.shape == (n_spikes, n_sim_tem)
             assert template_features_ind.shape == (n_templates, n_sim_tem)
@@ -225,6 +223,7 @@ class TemplateController(Controller):
         # Templates
         self.templates = templates
         self.n_samples_templates = n_samples_templates
+        self.n_samples_waveforms = n_samples_templates
         self.template_lim = np.max(np.abs(self.templates))
 
         # Unwhiten the templates.
@@ -322,7 +321,7 @@ class TemplateController(Controller):
         nfpc = self.n_features_per_channel
         ns = len(spike_ids)
         f = _densify(spike_ids, self.all_features,
-                     self.features_ind[:, st].T, self.n_channels)
+                     self.features_ind[st, :], self.n_channels)
         f = np.transpose(f, (0, 2, 1))
         assert f.shape == (ns, nc, nfpc)
         b = Bunch()
