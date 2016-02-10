@@ -145,14 +145,17 @@ class TemplateController(Controller):
         super(TemplateController, self).__init__()
 
     def _init_data(self):
-        traces = read_dat(self.dat_path,
-                          n_channels=self.n_channels_dat,
-                          dtype=self.dtype or np.int16,
-                          offset=self.offset,
-                          )
-
-        n_samples_t, _ = traces.shape
-        assert _ == self.n_channels_dat
+        if op.exists(self.dat_path):
+            traces = read_dat(self.dat_path,
+                              n_channels=self.n_channels_dat,
+                              dtype=self.dtype or np.int16,
+                              offset=self.offset,
+                              )
+            n_samples_t, _ = traces.shape
+            assert _ == self.n_channels_dat
+        else:
+            traces = None
+            n_samples_t = 0
 
         amplitudes = read_array('amplitudes').squeeze()
         n_spikes, = amplitudes.shape
@@ -226,7 +229,8 @@ class TemplateController(Controller):
 
         self.n_channels = n_channels
         # Take dead channels into account.
-        traces = _concatenate_virtual_arrays([traces], channel_mapping)
+        if traces is not None:
+            traces = _concatenate_virtual_arrays([traces], channel_mapping)
 
         # Amplitudes
         self.all_amplitudes = amplitudes
@@ -273,12 +277,15 @@ class TemplateController(Controller):
 
         # Fetch waveforms from traces.
         nsw = self.n_samples_waveforms
-        waveforms = WaveformLoader(traces=traces,
-                                   n_samples_waveforms=nsw,
-                                   filter=the_filter,
-                                   filter_margin=filter_margin,
-                                   )
-        waveforms = SpikeLoader(waveforms, spike_samples)
+        if traces is not None:
+            waveforms = WaveformLoader(traces=traces,
+                                       n_samples_waveforms=nsw,
+                                       filter=the_filter,
+                                       filter_margin=filter_margin,
+                                       )
+            waveforms = SpikeLoader(waveforms, spike_samples)
+        else:
+            waveforms = None
         self.all_waveforms = waveforms
 
         self.template_masks = get_masks(templates)
@@ -333,14 +340,17 @@ class TemplateController(Controller):
             self.get_cluster_pair_features)
 
     def get_waveforms(self, cluster_id):
-        # Waveforms.
-        waveforms_b = self._select_data(cluster_id,
-                                        self.all_waveforms,
-                                        100,  # TODO
-                                        )
-        m = waveforms_b.data.mean(axis=1).mean(axis=1)
-        waveforms_b.data = waveforms_b.data.astype(np.float64)
-        waveforms_b.data -= m[:, np.newaxis, np.newaxis]
+        if self.all_waveforms is not None:
+            # Waveforms.
+            waveforms_b = self._select_data(cluster_id,
+                                            self.all_waveforms,
+                                            100,  # TODO
+                                            )
+            m = waveforms_b.data.mean(axis=1).mean(axis=1)
+            waveforms_b.data = waveforms_b.data.astype(np.float64)
+            waveforms_b.data -= m[:, np.newaxis, np.newaxis]
+        else:
+            waveforms_b = None
         # Find the templates corresponding to the cluster.
         template_ids = np.nonzero(self.get_cluster_templates(cluster_id))[0]
         # Templates.
@@ -350,7 +360,7 @@ class TemplateController(Controller):
         assert masks.ndim == 2
         assert templates.shape[0] == masks.shape[0]
         # Find mean amplitude.
-        spike_ids = waveforms_b.spike_ids
+        spike_ids = self._select_spikes(cluster_id)
         mean_amp = self.all_amplitudes[spike_ids].mean()
         tmp = templates * mean_amp
         template_b = Bunch(spike_ids=template_ids,
@@ -359,7 +369,10 @@ class TemplateController(Controller):
                            masks=masks,
                            alpha=1.,
                            )
-        return [waveforms_b, template_b]
+        if waveforms_b is not None:
+            return [waveforms_b, template_b]
+        else:
+            return [template_b]
 
     def get_features(self, cluster_id, load_all=False):
         # TODO: load all features
@@ -510,7 +523,7 @@ def create_template_gui(dat_path=None, plugins=None, **kwargs):
     controller.add_waveform_view(gui)
 
     controller.add_amplitude_view(gui)
-    controller.add_trace_view(gui)
+    # controller.add_trace_view(gui)
     controller.add_correlogram_view(gui)
 
     if controller.all_features is not None:
