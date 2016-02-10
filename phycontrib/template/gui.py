@@ -44,10 +44,12 @@ def subtract_templates(traces,
     traces = traces.copy()
     st = spike_times
     w = spike_templates * amplitudes[:, np.newaxis, np.newaxis]
+    n_spikes, n_samples_t, n_channels = w.shape
     n = traces.shape[0]
     for index in range(w.shape[0]):
         t = int(round((st[index] - start) * sample_rate))
-        i, j = 20, 41
+        i, j = n_samples_t // 2, n_samples_t // 2 + (n_samples_t % 2)
+        assert i + j == n_samples_t
         x = w[index]  # (n_samples, n_channels)
         sa, sb = t - i, t + j
         if sa < 0:
