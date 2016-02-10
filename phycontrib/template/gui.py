@@ -304,6 +304,8 @@ class TemplateController(Controller):
                                         self.all_waveforms,
                                         100,  # TODO
                                         )
+        m = waveforms_b.data.mean(axis=1).mean(axis=1)
+        waveforms_b.data /= m[:, np.newaxis, np.newaxis]
         # Find the templates corresponding to the cluster.
         template_ids = np.nonzero(self.get_cluster_templates(cluster_id))[0]
         # Templates.
