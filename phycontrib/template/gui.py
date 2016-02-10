@@ -7,8 +7,10 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import csv
 import logging
 import os.path as op
+import shutil
 
 import numpy as np
 import scipy.io as sio
@@ -75,11 +77,14 @@ class FeatureTemplateView(ScatterView):
 #------------------------------------------------------------------------------
 
 filenames = {
-    'amplitudes': 'amplitudes.npy',
     'spike_templates': 'spike_templates.npy',
-    'spike_clusters': 'spike_templates.npy',  # TODO
-    'templates': 'templates.npy',
+    'spike_clusters': 'spike_clusters.npy',
+    'cluster_groups': 'cluster_groups.csv',
+
     'spike_samples': 'spike_times.npy',
+    'amplitudes': 'amplitudes.npy',
+    'templates': 'templates.npy',
+
     'channel_mapping': 'channel_map.npy',
     'channel_positions': 'channel_positions.npy',
     'whitening_matrix': 'whitening_mat.npy',
@@ -153,6 +158,10 @@ class TemplateController(Controller):
         n_spikes, = amplitudes.shape
         self.n_spikes = n_spikes
 
+        # Create spike_clusters if the file doesn't exist.
+        if not op.exists(filenames['spike_clusters']):
+            shutil.copy(filenames['spike_templates'],
+                        filenames['spike_clusters'])
         spike_clusters = read_array('spike_clusters').squeeze()
         spike_clusters = spike_clusters.astype(np.int32)
         assert spike_clusters.shape == (n_spikes,)
@@ -239,7 +248,7 @@ class TemplateController(Controller):
         assert np.all(np.diff(self.spike_times) >= 0)
 
         self.cluster_ids = np.unique(self.spike_clusters)
-        n_clusters = len(self.cluster_ids)
+        # n_clusters = len(self.cluster_ids)
 
         self.channel_positions = channel_positions
         self.all_traces = traces
@@ -275,8 +284,21 @@ class TemplateController(Controller):
         self.template_masks = get_masks(templates)
         self.all_masks = MaskLoader(self.template_masks, self.spike_templates)
 
-        # TODO
-        self.cluster_groups = {c: None for c in range(n_clusters)}
+        # Read the cluster groups.
+        self.cluster_groups = {}
+        if op.exists(filenames['cluster_groups']):
+            with open(filenames['cluster_groups'], 'r') as f:
+                reader = csv.reader(f)
+                # Skip the header.
+                for row in reader:
+                    break
+                for row in reader:
+                    cluster, group = row
+                    cluster = int(cluster)
+                    self.cluster_groups[cluster] = group
+        for cluster_id in self.cluster_ids:
+            if cluster_id not in self.cluster_groups:
+                self.cluster_groups[cluster_id] = None
 
     def get_cluster_templates(self, cluster_id):
         spike_ids = self.spikes_per_cluster(cluster_id)
@@ -499,7 +521,13 @@ def create_template_gui(dat_path=None, plugins=None, **kwargs):
     # Save.
     @gui.connect_
     def on_request_save(spike_clusters, groups):
-        # TODO
-        pass
+        # Save the clusters.
+        np.save(filenames['spike_clusters'], spike_clusters)
+        # Save the cluster groups.
+        with open(filenames['cluster_groups'], 'w') as f:
+            writer = csv.writer(f)
+            writer.writerow(['cluster_id', 'group'])
+            writer.writerows([(cluster, groups[cluster])
+                              for cluster in sorted(groups)])
 
     return gui
