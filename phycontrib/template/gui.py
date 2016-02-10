@@ -295,7 +295,7 @@ class TemplateController(Controller):
         self.cluster_groups = {}
         if op.exists(filenames['cluster_groups']):
             with open(filenames['cluster_groups'], 'r') as f:
-                reader = csv.reader(f)
+                reader = csv.reader(f, delimiter='\t')
                 # Skip the header.
                 for row in reader:
                     break
