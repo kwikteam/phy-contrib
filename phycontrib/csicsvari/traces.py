@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 def _dat_n_samples(filename, dtype=None, n_channels=None, offset=None):
     assert dtype is not None
     item_size = np.dtype(dtype).itemsize
+    offset = offset if offset else 0
     n_samples = (op.getsize(filename) - offset) // (item_size * n_channels)
     assert n_samples >= 0
     return n_samples
