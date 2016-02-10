@@ -313,7 +313,8 @@ class TemplateController(Controller):
                            )
         return [waveforms_b, template_b]
 
-    def get_features(self, cluster_id):
+    def get_features(self, cluster_id, load_all=False):
+        # TODO: load all features
         # Overriden to take into account the sparse structure.
         spike_ids = self._select_spikes(cluster_id, 1000)
         st = self.spike_templates[spike_ids]
