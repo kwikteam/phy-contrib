@@ -19,10 +19,10 @@ logger = logging.getLogger(__name__)
 # Raw data readers
 #------------------------------------------------------------------------------
 
-def _dat_n_samples(filename, dtype=None, n_channels=None):
+def _dat_n_samples(filename, dtype=None, n_channels=None, offset=None):
     assert dtype is not None
     item_size = np.dtype(dtype).itemsize
-    n_samples = op.getsize(filename) // (item_size * n_channels)
+    n_samples = (op.getsize(filename) - offset) // (item_size * n_channels)
     assert n_samples >= 0
     return n_samples
 
@@ -69,7 +69,9 @@ def _read_dat(filename, dtype=None, shape=None, offset=0, n_channels=None):
     if shape is None:
         assert n_channels > 0
         n_samples = _dat_n_samples(filename, dtype=dtype,
-                                   n_channels=n_channels)
+                                   n_channels=n_channels,
+                                   offset=offset,
+                                   )
         shape = (n_samples, n_channels)
     return np.memmap(filename, dtype=dtype, shape=shape,
                      mode='r', offset=offset)

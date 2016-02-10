@@ -143,6 +143,7 @@ class TemplateController(Controller):
         traces = read_dat(self.dat_path,
                           n_channels=self.n_channels_dat,
                           dtype=self.dtype or np.int16,
+                          offset=self.offset,
                           )
 
         n_samples_t, _ = traces.shape
@@ -278,6 +279,15 @@ class TemplateController(Controller):
     def get_background_features(self):
         # Disable for now
         pass
+
+    # def get_waveforms_amplitude(self, cluster_id):
+    #     # mm = self.get_mean_masks(cluster_id)
+    #     # mw = self.get_mean_waveforms(cluster_id)
+    #     # TODO: use clusters instead of templates
+    #     tmp = self.templates[[cluster_id]]
+    #     mm = get_masks(tmp)
+    #     assert mw.ndim == 2
+    #     return get_waveform_amplitude(mm, mw)
 
     def _init_context(self):
         super(TemplateController, self)._init_context()
