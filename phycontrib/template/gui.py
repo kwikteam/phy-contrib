@@ -230,8 +230,7 @@ class TemplateController(Controller):
 
         # Unwhiten the templates.
         self.whitening_matrix = read_array('whitening_matrix')
-        wmi = np.linalg.inv(self.whitening_matrix / 200.)
-        self.templates_unw = np.dot(self.templates, wmi)
+        self.templates_unw = np.dot(self.templates, self.whitening_matrix)
 
         self.duration = n_samples_t / float(self.sample_rate)
 
