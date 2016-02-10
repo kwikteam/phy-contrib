@@ -16,9 +16,9 @@ import scipy.io as sio
 from phy.cluster.manual import ManualClustering
 from phy.cluster.manual.controller import Controller
 from phy.cluster.manual.views import (select_traces, ScatterView)
-
 from phy.gui import create_gui
 from phy.io.array import concat_per_cluster
+from phy.stats.clusters import get_waveform_amplitude
 from phy.traces import SpikeLoader, WaveformLoader
 from phy.traces.filter import apply_filter, bandpass_filter
 from phy.utils import Bunch
@@ -280,14 +280,15 @@ class TemplateController(Controller):
         # Disable for now
         pass
 
-    # def get_waveforms_amplitude(self, cluster_id):
-    #     # mm = self.get_mean_masks(cluster_id)
-    #     # mw = self.get_mean_waveforms(cluster_id)
-    #     # TODO: use clusters instead of templates
-    #     tmp = self.templates[[cluster_id]]
-    #     mm = get_masks(tmp)
-    #     assert mw.ndim == 2
-    #     return get_waveform_amplitude(mm, mw)
+    def get_waveforms_amplitude(self, cluster_id):
+        # TODO: use clusters instead of templates
+        mw = self.templates[[cluster_id]]
+        mm = get_masks(mw)
+        mw = mw[0, ...]
+        mm = mm[0, ...]
+        assert mw.ndim == 2
+        assert mw.ndim == 2
+        return get_waveform_amplitude(mm, mw)
 
     def _init_context(self):
         super(TemplateController, self)._init_context()
