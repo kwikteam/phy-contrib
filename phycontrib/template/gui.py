@@ -179,6 +179,15 @@ class TemplateController(Controller):
         if op.exists(filenames['features']):
             all_features = np.load(filenames['features'], mmap_mode='r')
             features_ind = read_array('features_ind').astype(np.int32)
+
+            assert all_features.ndim == 3
+            n_loc_chan = all_features.shape[2]
+            assert all_features.shape == (self.n_spikes,
+                                          self.n_features_per_channel,
+                                          n_loc_chan,
+                                          )
+            # Check sparse features arrays shapes.
+            assert features_ind.shape == (self.n_templates, n_loc_chan)
         else:
             all_features = None
             features_ind = None
@@ -186,15 +195,6 @@ class TemplateController(Controller):
         self.all_features = all_features
         self.features_ind = features_ind
         self.n_features_per_channel = 3
-
-        # Check sparse features arrays shapes.
-        assert all_features.ndim == 3
-        n_loc_chan = all_features.shape[2]
-        assert all_features.shape == (self.n_spikes,
-                                      self.n_features_per_channel,
-                                      n_loc_chan,
-                                      )
-        assert features_ind.shape == (self.n_templates, n_loc_chan)
 
         if op.exists(filenames['template_features']):
             template_features = np.load(filenames['template_features'],
@@ -401,6 +401,7 @@ class TemplateController(Controller):
 
     def similarity(self, cluster_id):
         sim = []
+        sim0 = []
         if self.template_features_ind is not None:
             # Find the templates corresponding to the cluster.
             count = self.get_cluster_templates(cluster_id)
