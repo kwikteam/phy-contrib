@@ -523,7 +523,8 @@ def create_template_gui(dat_path=None, plugins=None, **kwargs):
     controller.add_waveform_view(gui)
 
     controller.add_amplitude_view(gui)
-    # controller.add_trace_view(gui)
+    if controller.all_traces is not None:
+        controller.add_trace_view(gui)
     controller.add_correlogram_view(gui)
 
     if controller.all_features is not None:
