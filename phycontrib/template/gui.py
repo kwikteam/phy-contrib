@@ -252,8 +252,15 @@ class TemplateController(Controller):
                                    high=self.sample_rate * .475,
                                    order=order)
 
-        def the_filter(x, axis=0):
-            return apply_filter(x, b_filter, axis=axis)
+        # Only filter the data for the waveforms if the traces
+        # are not already filtered.
+        if not getattr(self, 'hp_filtered', False):
+            logger.debug("HP filtering the data for waveforms")
+
+            def the_filter(x, axis=0):
+                return apply_filter(x, b_filter, axis=axis)
+        else:
+            the_filter = None
 
         # Fetch waveforms from traces.
         nsw = self.n_samples_waveforms
@@ -281,8 +288,12 @@ class TemplateController(Controller):
         pass
 
     def get_waveforms_amplitude(self, cluster_id):
-        # TODO: use clusters instead of templates
-        mw = self.templates[[cluster_id]]
+        nt = self.get_cluster_templates(cluster_id)
+        # Find the template with the highest number of spikes belonging
+        # to the selected cluster.
+        template_id = np.argmax(nt)
+        # Find the masked template waveform amplitude.
+        mw = self.templates[[template_id]]
         mm = get_masks(mw)
         mw = mw[0, ...]
         mm = mm[0, ...]
