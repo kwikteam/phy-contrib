@@ -185,6 +185,7 @@ class TemplateController(Controller):
 
             assert all_features.ndim == 3
             n_loc_chan = all_features.shape[2]
+            self.n_features_per_channel = all_features.shape[1]
             assert all_features.shape == (self.n_spikes,
                                           self.n_features_per_channel,
                                           n_loc_chan,
@@ -197,7 +198,6 @@ class TemplateController(Controller):
 
         self.all_features = all_features
         self.features_ind = features_ind
-        self.n_features_per_channel = 3
 
         if op.exists(filenames['template_features']):
             template_features = np.load(filenames['template_features'],
