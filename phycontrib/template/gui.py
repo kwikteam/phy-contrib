@@ -539,7 +539,7 @@ def create_template_gui(dat_path=None, plugins=None, **kwargs):
         np.save(filenames['spike_clusters'], spike_clusters)
         # Save the cluster groups.
         with open(filenames['cluster_groups'], 'w') as f:
-            writer = csv.writer(f)
+            writer = csv.writer(f, delimiter='\t')
             writer.writerow(['cluster_id', 'group'])
             writer.writerows([(cluster, groups[cluster])
                               for cluster in sorted(groups)])
