@@ -317,6 +317,7 @@ class TemplateController(Controller):
                                         100,  # TODO
                                         )
         m = waveforms_b.data.mean(axis=1).mean(axis=1)
+        waveforms_b.data = waveforms_b.data.astype(np.float64)
         waveforms_b.data -= m[:, np.newaxis, np.newaxis]
         # Find the templates corresponding to the cluster.
         template_ids = np.nonzero(self.get_cluster_templates(cluster_id))[0]
@@ -422,7 +423,8 @@ class TemplateController(Controller):
                                     )
 
         return [Bunch(traces=tr),
-                Bunch(traces=tr_sub, color=(.25, .25, .25, .75))]
+                Bunch(traces=tr_sub, color=(.25, .25, .25, .75)),
+                ]
 
     def similarity(self, cluster_id):
         sim = []
