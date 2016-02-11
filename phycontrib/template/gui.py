@@ -544,4 +544,9 @@ def create_template_gui(dat_path=None, plugins=None, **kwargs):
             writer.writerows([(cluster, groups[cluster])
                               for cluster in sorted(groups)])
 
+    # Save the memcache when closing the GUI.
+    @gui.connect_
+    def on_close():
+        controller.context.save_memcache()
+
     return gui
