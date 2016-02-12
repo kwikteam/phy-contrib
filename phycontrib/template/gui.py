@@ -481,9 +481,10 @@ class TemplateController(Controller):
             n = len(sim0)
             sim.extend([(int(c), -n + i) for i, c in enumerate(sim0)])
 
-        sim1 = self.get_close_clusters(cluster_id)
-        sim1 = [_ for _ in sim1 if _[0] not in sim0]
-        sim.extend(sim1)
+        # TODO: use similarity.npy instead
+        # sim1 = self.get_close_clusters(cluster_id)
+        # sim1 = [_ for _ in sim1 if _[0] not in sim0]
+        # sim.extend(sim1)
         return sim
 
     def set_manual_clustering(self, gui):
@@ -493,7 +494,7 @@ class TemplateController(Controller):
                               cluster_groups=self.cluster_groups,
                               )
         self.manual_clustering = mc
-        mc.add_column(self.get_probe_depth)
+        mc.add_column(self.get_probe_depth, name='probe_depth')
         mc.attach(gui)
 
     def add_amplitude_view(self, gui):
