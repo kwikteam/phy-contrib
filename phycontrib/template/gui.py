@@ -378,7 +378,8 @@ class TemplateController(Controller):
     def get_features(self, cluster_id, load_all=False):
         # TODO: load all features
         # Overriden to take into account the sparse structure.
-        spike_ids = self._select_spikes(cluster_id, 1000)
+        spike_ids = self._select_spikes(cluster_id,
+                                        1000 if not load_all else None)
         st = self.spike_templates[spike_ids]
         nc = self.n_channels
         nfpc = self.n_features_per_channel
