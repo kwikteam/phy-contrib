@@ -93,6 +93,8 @@ filenames = {
     'features_ind': 'pc_feature_ind.npy',
     'template_features': 'template_features.npy',
     'template_features_ind': 'template_feature_ind.npy',
+
+    'similar_templates': 'similar_templates.npy',
 }
 
 
@@ -183,6 +185,10 @@ class TemplateController(Controller):
         # templates = np.transpose(templates, (2, 1, 0))
         n_templates, n_samples_templates, n_channels = templates.shape
         self.n_templates = n_templates
+
+        self.similar_templates = read_array('similar_templates')
+        assert self.similar_templates.shape == (self.n_templates,
+                                                self.n_templates)
 
         channel_mapping = read_array('channel_mapping').squeeze()
         channel_mapping = channel_mapping.astype(np.int32)
@@ -376,7 +382,6 @@ class TemplateController(Controller):
             return [template_b]
 
     def get_features(self, cluster_id, load_all=False):
-        # TODO: load all features
         # Overriden to take into account the sparse structure.
         spike_ids = self._select_spikes(cluster_id,
                                         1000 if not load_all else None)
@@ -464,29 +469,12 @@ class TemplateController(Controller):
                 ]
 
     def similarity(self, cluster_id):
-        sim = []
-        sim0 = []
-        if self.template_features_ind is not None:
-            # Find the templates corresponding to the cluster.
-            count = self.get_cluster_templates(cluster_id)
-            sim_templates = np.argsort(count)[::-1]
-            # Only keep templates corresponding to the cluster.
-            n = np.sum(count > 0)
-            sim_templates = sim_templates[:n]
-            # Sort them by decreasing size.
-            # Add the similar templates.
-            sim0 = []
-            for tid in sim_templates:
-                sim0.extend([tmp for tmp in self.template_features_ind[tid]
-                             if tmp not in sim0])
-            n = len(sim0)
-            sim.extend([(int(c), -n + i) for i, c in enumerate(sim0)])
-
-        # TODO: use similarity.npy instead
-        # sim1 = self.get_close_clusters(cluster_id)
-        # sim1 = [_ for _ in sim1 if _[0] not in sim0]
-        # sim.extend(sim1)
-        return sim
+        count = self.get_cluster_templates(cluster_id)
+        # Load the templates similar to the largest parent template.
+        largest_template = np.argmax(count)
+        sim = self.similar_templates[largest_template]
+        templates = np.argsort(sim)[::-1]
+        return [(int(c), sim[c]) for i, c in enumerate(templates)]
 
     def set_manual_clustering(self, gui):
         mc = ManualClustering(self.spike_clusters,
