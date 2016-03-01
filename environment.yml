@@ -18,8 +18,10 @@ dependencies:
   - joblib
   - cython
   - click
+  - dask
   - cloudpickle
   - toolz
+  - dill
   - pip:
     - klustakwik2
     - git+https://github.com/kwikteam/phy.git@kill-kwik
