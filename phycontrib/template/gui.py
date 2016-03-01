@@ -15,7 +15,6 @@ import shutil
 import numpy as np
 import scipy.io as sio
 
-from phy.cluster.manual import ManualClustering
 from phy.cluster.manual.controller import Controller
 from phy.cluster.manual.views import (select_traces, ScatterView)
 from phy.gui import create_gui
