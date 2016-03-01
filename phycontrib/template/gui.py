@@ -476,16 +476,6 @@ class TemplateController(Controller):
         templates = np.argsort(sim)[::-1]
         return [(int(c), sim[c]) for i, c in enumerate(templates)]
 
-    def set_manual_clustering(self, gui):
-        mc = ManualClustering(self.spike_clusters,
-                              self.spikes_per_cluster,
-                              similarity=self.similarity,
-                              cluster_groups=self.cluster_groups,
-                              )
-        self.manual_clustering = mc
-        mc.add_column(self.get_probe_depth, name='probe_depth')
-        mc.attach(gui)
-
     def add_amplitude_view(self, gui):
         view = AmplitudeView(coords=self.get_amplitudes,
                              )
