@@ -14,20 +14,11 @@
     "scaling": 2.0736
   },
   "TraceView0": {
-    "origin": null,
-    "scaling": 13.109994191499954
+    "origin": null
   },
   "WaveformView0": {
-    "box_scaling": [
-      3.797498335832415,
-      4.594972986357222
-    ],
     "do_zoom_on_channels": true,
-    "overlap": false,
-    "probe_scaling": [
-      2.1435888100000016,
-      1.0
-    ]
+    "overlap": false
   },
   "geometry_state": {
     "geometry": {

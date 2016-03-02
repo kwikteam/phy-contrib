@@ -9,23 +9,13 @@
   },
   "FeatureTemplateView0": {},
   "FeatureView0": {
-    "scaling": 31.947999937062278
   },
   "TraceView0": {
-    "origin": null,
-    "scaling": 2.143588810000001
+    "origin": null
   },
   "WaveformView0": {
-    "box_scaling": [
-      19.19434249577509,
-      3.7974983358324144
-    ],
     "do_zoom_on_channels": true,
-    "overlap": false,
-    "probe_scaling": [
-      34.003948586157826,
-      1.3310000000000004
-    ]
+    "overlap": false
   },
   "geometry_state": {
     "geometry": {
