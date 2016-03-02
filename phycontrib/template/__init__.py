@@ -7,4 +7,4 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from .gui import create_template_gui, TemplateController  # noqa
+from .gui import TemplateGUIPlugin, TemplateController  # noqa

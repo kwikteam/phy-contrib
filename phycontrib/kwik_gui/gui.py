@@ -14,7 +14,7 @@ import shutil
 import click
 
 from phy import IPlugin
-from phy.gui import create_app, create_gui, run_app
+from phy.gui import create_app, run_app
 from phy.cluster.manual.controller import Controller
 
 from phycontrib.kwik import KwikModel
@@ -62,28 +62,20 @@ class KwikController(Controller):
         self.all_features = m.all_features
         self.all_traces = m.all_traces
 
+    def create_gui(self, plugins=None, config_dir=None):
+        """Create the kwik GUI."""
+        create = super(KwikController, self).create_gui
+        gui = create(name='KwikGUI', subtitle=self.path,
+                     plugins=plugins, config_dir=config_dir)
+        model = self.model
 
-def create_kwik_gui(path, plugins=None):
-    controller = KwikController(path)
-    model = controller.model
-    # Create the GUI.
-    gui = create_gui(name='KwikGUI',
-                     subtitle=model.kwik_path,
-                     plugins=plugins,
-                     )
-    controller.set_manual_clustering(gui)
-    controller.add_waveform_view(gui)
-    controller.add_feature_view(gui)
-    controller.add_trace_view(gui)
-    controller.add_correlogram_view(gui)
+        # Save.
+        @gui.connect_
+        def on_request_save(spike_clusters, groups):
+            groups = {c: g.title() for c, g in groups.items()}
+            model.save(spike_clusters, groups)
 
-    # Save.
-    @gui.connect_
-    def on_request_save(spike_clusters, groups):
-        groups = {c: g.title() for c, g in groups.items()}
-        model.save(spike_clusters, groups)
-
-    return gui
+        return gui
 
 
 #------------------------------------------------------------------------------
@@ -96,18 +88,15 @@ class KwikGUIPlugin(IPlugin):
     def attach_to_cli(self, cli):
 
         # Create the `phy cluster-manual file.kwik` command.
-        @cli.command('cluster-manual')
+        @cli.command('kwik-gui')
         @click.argument('path', type=click.Path(exists=True))
         def cluster_manual(path):
 
             # Create the Qt application.
             create_app()
 
-            # List of plugins activated by default.
-            plugins = ['SaveGeometryStatePlugin',
-                       ]
-
-            gui = create_kwik_gui(path, plugins=plugins)
+            controller = KwikController(path)
+            gui = controller.create_gui()
 
             gui.show()
             run_app()

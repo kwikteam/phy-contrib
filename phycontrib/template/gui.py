@@ -12,17 +12,18 @@ import logging
 import os.path as op
 import shutil
 
+import click
 import numpy as np
 import scipy.io as sio
 
 from phy.cluster.manual.controller import Controller
 from phy.cluster.manual.views import (select_traces, ScatterView)
-from phy.gui import create_gui
+from phy.gui import create_app, run_app
 from phy.io.array import concat_per_cluster
 from phy.stats.clusters import get_waveform_amplitude
 from phy.traces import SpikeLoader, WaveformLoader
 from phy.traces.filter import apply_filter, bandpass_filter
-from phy.utils import Bunch
+from phy.utils import Bunch, IPlugin
 
 from phycontrib.kwik.model import _concatenate_virtual_arrays
 from phycontrib.csicsvari.traces import read_dat
@@ -487,46 +488,59 @@ class TemplateController(Controller):
         view.attach(gui)
         return view
 
+    def create_gui(self, plugins=None, config_dir=None):
+        """Create the template GUI."""
+        create = super(TemplateController, self).create_gui
+        gui = create(name='TemplateGUI', subtitle=self.dat_path,
+                     plugins=plugins, config_dir=config_dir)
+
+        # Add custom views for the template GUI.
+        if self.all_amplitudes is not None:
+            self.add_amplitude_view(gui)
+        if self.template_features is not None:
+            self.add_feature_template_view(gui)
+
+        # Save.
+        @gui.connect_
+        def on_request_save(spike_clusters, groups):
+            # Save the clusters.
+            np.save(filenames['spike_clusters'], spike_clusters)
+            # Save the cluster groups.
+            with open(filenames['cluster_groups'], 'w', newline='') as f:
+                writer = csv.writer(f, delimiter='\t')
+                writer.writerow(['cluster_id', 'group'])
+                writer.writerows([(cluster, groups[cluster])
+                                  for cluster in sorted(groups)])
+
+        # Save the memcache when closing the GUI.
+        @gui.connect_
+        def on_close():
+            self.context.save_memcache()
+
+        return gui
+
 
 #------------------------------------------------------------------------------
-# Template GUI
+# Template GUI plugin
 #------------------------------------------------------------------------------
 
-def create_template_gui(dat_path=None, plugins=None, **kwargs):
-    controller = TemplateController(dat_path, **kwargs)
-    # Create the GUI.
-    gui = create_gui(name='TemplateGUI',
-                     subtitle=dat_path,
-                     plugins=plugins,
-                     )
-    controller.set_manual_clustering(gui)
-    controller.add_waveform_view(gui)
+class TemplateGUIPlugin(IPlugin):
+    """Create the `phy cluster-manual` command for Kwik files."""
 
-    controller.add_amplitude_view(gui)
-    if controller.all_traces is not None:
-        controller.add_trace_view(gui)
-    controller.add_correlogram_view(gui)
+    def attach_to_cli(self, cli):
 
-    if controller.all_features is not None:
-        controller.add_feature_view(gui)
-    if controller.template_features is not None:
-        controller.add_feature_template_view(gui)
+        # Create the `phy cluster-manual file.kwik` command.
+        @cli.command('template-gui')
+        @click.argument('datpath', type=click.Path(exists=True))
+        def cluster_manual(datpath):
 
-    # Save.
-    @gui.connect_
-    def on_request_save(spike_clusters, groups):
-        # Save the clusters.
-        np.save(filenames['spike_clusters'], spike_clusters)
-        # Save the cluster groups.
-        with open(filenames['cluster_groups'], 'w', newline='') as f:
-            writer = csv.writer(f, delimiter='\t')
-            writer.writerow(['cluster_id', 'group'])
-            writer.writerows([(cluster, groups[cluster])
-                              for cluster in sorted(groups)])
+            # Create the Qt application.
+            create_app()
 
-    # Save the memcache when closing the GUI.
-    @gui.connect_
-    def on_close():
-        controller.context.save_memcache()
+            controller = TemplateController(datpath)
+            gui = controller.create_gui()
 
-    return gui
+            gui.show()
+            run_app()
+            gui.close()
+            del gui
