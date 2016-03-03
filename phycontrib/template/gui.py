@@ -477,16 +477,12 @@ class TemplateController(Controller):
         return [(int(c), sim[c]) for i, c in enumerate(templates)]
 
     def add_amplitude_view(self, gui):
-        view = AmplitudeView(coords=self.get_amplitudes,
-                             )
-        view.attach(gui)
-        return view
+        v = AmplitudeView(coords=self.get_amplitudes)
+        return self._add_view(gui, v)
 
     def add_feature_template_view(self, gui):
-        view = FeatureTemplateView(coords=self.get_cluster_features,
-                                   )
-        view.attach(gui)
-        return view
+        v = FeatureTemplateView(coords=self.get_cluster_features)
+        return self._add_view(gui, v)
 
     def create_gui(self, plugins=None, config_dir=None):
         """Create the template GUI."""
