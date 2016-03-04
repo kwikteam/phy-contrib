@@ -367,7 +367,7 @@ class TemplateController(Controller):
         assert masks.ndim == 2
         assert templates.shape[0] == masks.shape[0]
         # Find mean amplitude.
-        spike_ids = self._select_spikes(cluster_id)
+        spike_ids = self._select_spikes(cluster_id, 100)  # TODO
         mean_amp = self.all_amplitudes[spike_ids].mean()
         tmp = templates * mean_amp
         template_b = Bunch(spike_ids=template_ids,
@@ -401,7 +401,7 @@ class TemplateController(Controller):
         return b
 
     def get_amplitudes(self, cluster_id):
-        spike_ids = self._select_spikes(cluster_id, 10000)
+        spike_ids = self._select_spikes(cluster_id, 1000)
         d = Bunch()
         d.spike_ids = spike_ids
         d.spike_clusters = cluster_id * np.ones(len(spike_ids), dtype=np.int32)
@@ -417,8 +417,8 @@ class TemplateController(Controller):
         return _densify(spike_ids, tf, ind, self.n_templates)
 
     def get_cluster_pair_features(self, ci, cj):
-        si = self._select_spikes(ci)
-        sj = self._select_spikes(cj)
+        si = self._select_spikes(ci, 1000)
+        sj = self._select_spikes(cj, 1000)
 
         ni = self.get_cluster_templates(ci)
         nj = self.get_cluster_templates(cj)
