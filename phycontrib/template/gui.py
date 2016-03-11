@@ -351,7 +351,7 @@ class TemplateController(Controller):
             # Waveforms.
             waveforms_b = self._select_data(cluster_id,
                                             self.all_waveforms,
-                                            100,  # TODO
+                                            self.n_spikes_waveforms,
                                             )
             m = waveforms_b.data.mean(axis=1).mean(axis=1)
             waveforms_b.data = waveforms_b.data.astype(np.float64)
@@ -367,7 +367,8 @@ class TemplateController(Controller):
         assert masks.ndim == 2
         assert templates.shape[0] == masks.shape[0]
         # Find mean amplitude.
-        spike_ids = self._select_spikes(cluster_id, 100)  # TODO
+        spike_ids = self._select_spikes(cluster_id,
+                                        self.n_spikes_waveforms_lim)
         mean_amp = self.all_amplitudes[spike_ids].mean()
         tmp = templates * mean_amp
         template_b = Bunch(spike_ids=template_ids,
@@ -384,7 +385,8 @@ class TemplateController(Controller):
     def get_features(self, cluster_id, load_all=False):
         # Overriden to take into account the sparse structure.
         spike_ids = self._select_spikes(cluster_id,
-                                        1000 if not load_all else None)
+                                        self.n_spikes_features
+                                        if not load_all else None)
         st = self.spike_templates[spike_ids]
         nc = self.n_channels
         nfpc = self.n_features_per_channel
@@ -401,7 +403,7 @@ class TemplateController(Controller):
         return b
 
     def get_amplitudes(self, cluster_id):
-        spike_ids = self._select_spikes(cluster_id, 1000)
+        spike_ids = self._select_spikes(cluster_id, self.n_spikes_features)
         d = Bunch()
         d.spike_ids = spike_ids
         d.spike_clusters = cluster_id * np.ones(len(spike_ids), dtype=np.int32)
@@ -417,8 +419,8 @@ class TemplateController(Controller):
         return _densify(spike_ids, tf, ind, self.n_templates)
 
     def get_cluster_pair_features(self, ci, cj):
-        si = self._select_spikes(ci, 1000)
-        sj = self._select_spikes(cj, 1000)
+        si = self._select_spikes(ci, self.n_spikes_features)
+        sj = self._select_spikes(cj, self.n_spikes_features)
 
         ni = self.get_cluster_templates(ci)
         nj = self.get_cluster_templates(cj)
