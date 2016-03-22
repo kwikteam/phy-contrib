@@ -41,6 +41,7 @@ class KwikController(Controller):
     def __init__(self, path):
         path = op.realpath(op.expanduser(path))
         _backup(path)
+        self.path = path
         self.cache_dir = op.join(op.dirname(path), '.phy')
         self.model = KwikModel(path)
         super(KwikController, self).__init__()
