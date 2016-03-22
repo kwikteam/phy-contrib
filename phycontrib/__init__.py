@@ -65,3 +65,6 @@ def _copy_all_gui_states():
 
 # Copy default states when importing the package.
 _copy_all_gui_states()
+
+# Create ~/.phy/plugins/phycontrib_loader.py.
+_create_loader_file()
