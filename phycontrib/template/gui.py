@@ -25,9 +25,31 @@ from phy.traces import SpikeLoader, WaveformLoader
 from phy.traces.filter import apply_filter, bandpass_filter
 from phy.utils import Bunch, IPlugin
 
-from phycontrib.csicsvari.traces import read_dat
-
 logger = logging.getLogger(__name__)
+
+
+#------------------------------------------------------------------------------
+# Utils
+#------------------------------------------------------------------------------
+
+def _dat_n_samples(filename, dtype=None, n_channels=None, offset=None):
+    assert dtype is not None
+    item_size = np.dtype(dtype).itemsize
+    offset = offset if offset else 0
+    n_samples = (op.getsize(filename) - offset) // (item_size * n_channels)
+    assert n_samples >= 0
+    return n_samples
+
+
+def _dat_to_traces(dat_path, n_channels=None, dtype=None, offset=None):
+    assert dtype is not None
+    assert n_channels is not None
+    n_samples = _dat_n_samples(dat_path,
+                               n_channels=n_channels,
+                               dtype=dtype,
+                               offset=offset,
+                               )
+    return np.memmap(dat_path, dtype=dtype, shape=(n_samples, n_channels))
 
 
 #------------------------------------------------------------------------------
@@ -147,11 +169,11 @@ class TemplateController(Controller):
 
     def _init_data(self):
         if op.exists(self.dat_path):
-            traces = read_dat(self.dat_path,
-                              n_channels=self.n_channels_dat,
-                              dtype=self.dtype or np.int16,
-                              offset=self.offset,
-                              )
+            traces = _dat_to_traces(self.dat_path,
+                                    n_channels=self.n_channels_dat,
+                                    dtype=self.dtype or np.int16,
+                                    offset=self.offset,
+                                    )
             n_samples_t, _ = traces.shape
             assert _ == self.n_channels_dat
         else:
