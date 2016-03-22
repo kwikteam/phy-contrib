@@ -17,7 +17,7 @@ from phy import IPlugin
 from phy.gui import create_app, run_app
 from phy.cluster.manual.controller import Controller
 
-from phycontrib.kwik import KwikModel
+from klusta.kwik import KwikModel
 
 logger = logging.getLogger(__name__)
 

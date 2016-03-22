@@ -13,7 +13,8 @@ import os.path as op
 import shutil
 from textwrap import dedent
 
-from . import kwik_gui  # noqa
+from .kwik_gui import KwikGUIPlugin, KwikController  # noqa
+from .template import TemplateGUIPlugin, TemplateController  # noqa
 
 logger = logging.getLogger(__name__)
 

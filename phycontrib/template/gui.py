@@ -19,13 +19,12 @@ import scipy.io as sio
 from phy.cluster.manual.controller import Controller
 from phy.cluster.manual.views import (select_traces, ScatterView)
 from phy.gui import create_app, run_app
-from phy.io.array import concat_per_cluster
+from phy.io.array import concat_per_cluster, _concatenate_virtual_arrays
 from phy.stats.clusters import get_waveform_amplitude
 from phy.traces import SpikeLoader, WaveformLoader
 from phy.traces.filter import apply_filter, bandpass_filter
 from phy.utils import Bunch, IPlugin
 
-from phycontrib.kwik.model import _concatenate_virtual_arrays
 from phycontrib.csicsvari.traces import read_dat
 
 logger = logging.getLogger(__name__)
@@ -523,7 +522,7 @@ class TemplateController(Controller):
 #------------------------------------------------------------------------------
 
 class TemplateGUIPlugin(IPlugin):
-    """Create the `phy cluster-manual` command for Kwik files."""
+    """Create the `phy template-gui` command for Kwik files."""
 
     def attach_to_cli(self, cli):
 

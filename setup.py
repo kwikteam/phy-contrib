@@ -23,7 +23,11 @@ setup(
     author='Kwik Team',
     author_email='cyrille.rossant at gmail.com',
     url='https://phy.cortexlab.net',
-    packages=['phycontrib'],
+    packages=[
+        'phycontrib',
+        'phycontrib.kwik_gui',
+        'phycontrib.template',
+    ],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',

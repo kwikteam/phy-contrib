@@ -23,5 +23,6 @@ dependencies:
   - toolz
   - dill
   - pip:
+    - klusta
     - klustakwik2
     - git+https://github.com/kwikteam/phy.git@kill-kwik
