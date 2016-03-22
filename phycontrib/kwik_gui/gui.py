@@ -17,9 +17,12 @@ from phy import IPlugin
 from phy.gui import create_app, run_app
 from phy.cluster.manual.controller import Controller
 
-from klusta.kwik import KwikModel
-
 logger = logging.getLogger(__name__)
+
+try:
+    from klusta.kwik import KwikModel
+except ImportError:
+    logger.debug("Package klusta not installed: the KwikGUI will not work.")
 
 
 #------------------------------------------------------------------------------
