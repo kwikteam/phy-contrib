@@ -24,6 +24,7 @@ from phy.stats.clusters import get_waveform_amplitude
 from phy.traces import SpikeLoader, WaveformLoader
 from phy.traces.filter import apply_filter, bandpass_filter
 from phy.utils import Bunch, IPlugin
+from phy.utils._misc import _read_python
 
 logger = logging.getLogger(__name__)
 
@@ -550,13 +551,16 @@ class TemplateGUIPlugin(IPlugin):
 
         # Create the `phy cluster-manual file.kwik` command.
         @cli.command('template-gui')
-        @click.argument('datpath', type=click.Path(exists=True))
-        def cluster_manual(datpath):
+        @click.argument('params-path', type=click.Path(exists=True))
+        def cluster_manual(params_path):
 
             # Create the Qt application.
             create_app()
 
-            controller = TemplateController(datpath)
+            params = _read_python(params_path)
+            params['dtype'] = getattr(np, params['dtype'], 'int16')
+
+            controller = TemplateController(**params)
             gui = controller.create_gui()
 
             gui.show()
