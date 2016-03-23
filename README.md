@@ -4,44 +4,21 @@
 [![codecov.io](https://img.shields.io/codecov/c/github/kwikteam/phy-contrib.svg)](http://codecov.io/github/kwikteam/phy-contrib?branch=master)
 [![PyPI release](https://img.shields.io/pypi/v/phy-contrib.svg)](https://pypi.python.org/pypi/phy-contrib)
 
-Community-contributed set of plugins for phy
+Plugins for [**phy**](https://github.com/kwikteam/phy).
 
-## Easy install
+**This repository is not ready for public use yet.**
 
-```
-$ pip install phycontrib
-```
-
-This will install `phycontrib` and create a `~/.phy/plugins/phycontrib_loader.py` file that will just import `phycontrib`. This will automatically load all phycontrib plugins.
-
-## Advanced install
-
-Just clone the repository in your `~/.phy/plugins/`. All Python files in that directory are automatically loaded, and the plugins defined there are readily available.
+If you want to try the development version, you first need to install phy. Then you can install phy-contrib with:
 
 ```
-$ cd ~/.phy/plugins/
-$ git clone https://github.com/kwikteam/phy-contrib
+git clone https://github.com/kwikteam/phy-contrib.git
+cd phy-contrib
+python setup.py develop
 ```
 
-## Plugins
+To update to the latest development version, do:
 
-Every plugin is implemented in a subdirectory inside `phycontrib/`.
-
-To implement a plugin, just create a Python script with a class deriving from `phy.IPlugin`:
-
-```python
-from phy import IPlugin
-
-class MyPlugin(IPlugin):
-    pass
 ```
-
-There, you can implement
-
-* `MyPlugin.attach_to_cli(cli)`: This is called when the `phy` command-line script is called. You have a chance to customize the script and add your own subcommands using the [**click** library](http://click.pocoo.org/5/).
-
-* `MyPlugin.attach_to_gui(gui, session)`: This is called when you attach that plugin to a `GUI` instance. In that function, you can add views, create actions, connect to events, and do anything you want on the GUI. This allows you to create independent components for GUIs.
-
-When you create a GUI, you need to call `phy.gui.load_gui_plugins(gui, plugins, session)` to automatically load and bind all discovered plugins to the GUI. The list of plugins attached by default is specified in `c.MyGUI.plugins = ['MyPlugin']` in the config file in `~/.phy/phy_config.py`.
-
-The `session` is just a dictionary when you can pass any data you want to the plugins.
+cd phy-contrib
+git pull
+```
