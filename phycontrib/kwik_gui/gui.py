@@ -38,12 +38,15 @@ def _backup(path):
 
 
 class KwikController(Controller):
-    def __init__(self, path):
+    def __init__(self, path, channel_group=None, clustering=None):
         path = op.realpath(op.expanduser(path))
         _backup(path)
         self.path = path
         self.cache_dir = op.join(op.dirname(path), '.phy')
-        self.model = KwikModel(path)
+        self.model = KwikModel(path,
+                               channel_group=channel_group,
+                               clustering=None,
+                               )
         super(KwikController, self).__init__()
 
     def _init_data(self):
@@ -94,15 +97,27 @@ class KwikGUIPlugin(IPlugin):
         # Create the `phy cluster-manual file.kwik` command.
         @cli.command('kwik-gui')
         @click.argument('path', type=click.Path(exists=True))
-        def cluster_manual(path):
+        @click.option('--channel-group', type=int)
+        @click.option('--clustering', type=str)
+        def cluster_manual(path, channel_group=None, clustering=None):
+            """Launch the Kwik GUI on a Kwik file."""
 
             # Create the Qt application.
             create_app()
 
-            controller = KwikController(path)
+            controller = KwikController(path,
+                                        channel_group=channel_group,
+                                        clustering=clustering,
+                                        )
             gui = controller.create_gui()
 
             gui.show()
             run_app()
             gui.close()
             del gui
+
+        @cli.command('kwik-describe')
+        @click.argument('path', type=click.Path(exists=True))
+        def describe(path):
+            """Describe a Kwik file."""
+            KwikModel(path).describe()
