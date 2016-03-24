@@ -11,6 +11,7 @@
 import os
 import os.path as op
 import re
+from textwrap import dedent
 
 from setuptools import setup
 
