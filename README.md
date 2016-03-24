@@ -1,14 +1,21 @@
 # phy-contrib
 
 [![Build Status](https://img.shields.io/travis/kwikteam/phy-contrib.svg)](https://travis-ci.org/kwikteam/phy-contrib)
-[![codecov.io](https://img.shields.io/codecov/c/github/kwikteam/phy-contrib.svg)](http://codecov.io/github/kwikteam/phy-contrib?branch=master)
-[![PyPI release](https://img.shields.io/pypi/v/phy-contrib.svg)](https://pypi.python.org/pypi/phy-contrib)
+[![PyPI release](https://img.shields.io/pypi/v/phycontrib.svg)](https://pypi.python.org/pypi/phycontrib)
 
 Plugins for [**phy**](https://github.com/kwikteam/phy).
 
-**This repository is not ready for public use yet.**
+## Quick install
 
-If you want to try the development version, you first need to install phy. Then you can install phy-contrib with:
+You first need to install [**phy**](https://github.com/kwikteam/phy). Then, activate your conda environment and do:
+
+```bash
+pip install phycontrib
+```
+
+### Installing the development version
+
+If you want to use the bleeding-edge version, do:
 
 ```
 git clone https://github.com/kwikteam/phy-contrib.git
@@ -16,7 +23,7 @@ cd phy-contrib
 python setup.py develop
 ```
 
-To update to the latest development version, do:
+Then, you can update at any time with:
 
 ```
 cd phy-contrib
