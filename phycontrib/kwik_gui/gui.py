@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 try:
     from klusta.kwik import KwikModel
 except ImportError:
-    logger.debug("Package klusta not installed: the KwikGUI will not work.")
+    logger.warn("Package klusta not installed: the KwikGUI will not work.")
 
 
 #------------------------------------------------------------------------------
