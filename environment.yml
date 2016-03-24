@@ -14,8 +14,9 @@ dependencies:
   - traitlets
   - six
   - joblib
+  - cython
   - click
+  - klustakwik2
   - pip:
     - klusta
-    - klustakwik2
     - git+https://github.com/kwikteam/phy.git@kill-kwik
