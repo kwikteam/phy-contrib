@@ -3,7 +3,6 @@ channels:
   - kwikteam
 dependencies:
   - python
-  - pip
   - numpy=1.9
   - vispy
   - matplotlib
@@ -14,9 +13,7 @@ dependencies:
   - traitlets
   - six
   - joblib
-  - cython
   - click
-  - klustakwik2
   - pip:
     - klusta
-    - git+https://github.com/kwikteam/phy.git@kill-kwik
+    - phy
