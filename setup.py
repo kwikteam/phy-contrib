@@ -8,11 +8,16 @@
 #------------------------------------------------------------------------------
 
 from setuptools import setup
+from phycontrib import _create_loader_file
 
 
 #------------------------------------------------------------------------------
 # Setup
 #------------------------------------------------------------------------------
+
+# Create ~/.phy/plugins/phycontrib_loader.py.
+_create_loader_file()
+
 
 setup(
     name='phycontrib',
