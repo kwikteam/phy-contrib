@@ -161,6 +161,8 @@ def _densify(rows, arr, ind, ncols):
 
 
 class TemplateController(Controller):
+    gui_name = 'TemplateGUI'
+
     def __init__(self, dat_path=None, **kwargs):
         path = op.realpath(op.expanduser(dat_path))
         self.cache_dir = op.join(op.dirname(path), '.phy')
@@ -511,7 +513,7 @@ class TemplateController(Controller):
     def create_gui(self, plugins=None, config_dir=None):
         """Create the template GUI."""
         create = super(TemplateController, self).create_gui
-        gui = create(name='TemplateGUI', subtitle=self.dat_path,
+        gui = create(name=self.gui_name, subtitle=self.dat_path,
                      plugins=plugins, config_dir=config_dir)
 
         # Add custom views for the template GUI.
@@ -558,7 +560,7 @@ class TemplateGUIPlugin(IPlugin):
         @cli.command('template-gui')
         @click.argument('params-path', type=click.Path(exists=True))
         def cluster_manual(params_path):
-
+            """Launch the Template GUI on a params.py file."""
             # Create the Qt application.
             create_app()
 

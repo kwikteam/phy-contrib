@@ -38,6 +38,8 @@ def _backup(path):
 
 
 class KwikController(Controller):
+    gui_name = 'KwikGUI'
+
     def __init__(self, path, channel_group=None, clustering=None):
         path = op.realpath(op.expanduser(path))
         _backup(path)
@@ -72,7 +74,7 @@ class KwikController(Controller):
     def create_gui(self, plugins=None, config_dir=None):
         """Create the kwik GUI."""
         create = super(KwikController, self).create_gui
-        gui = create(name='KwikGUI', subtitle=self.path,
+        gui = create(name=self.gui_name, subtitle=self.path,
                      plugins=plugins, config_dir=config_dir)
         model = self.model
 
