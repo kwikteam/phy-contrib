@@ -526,7 +526,12 @@ class TemplateController(Controller):
             # Save the clusters.
             np.save(filenames['spike_clusters'], spike_clusters)
             # Save the cluster groups.
-            with open(filenames['cluster_groups'], 'w', newline='') as f:
+            import sys
+            if sys.version_info[0] < 3:
+                file = open(filenames['cluster_groups'], 'wb')
+            else:
+                file = open(filenames['cluster_groups'], 'w', newline='')
+            with file as f:
                 writer = csv.writer(f, delimiter='\t')
                 writer.writerow(['cluster_id', 'group'])
                 writer.writerows([(cluster, groups[cluster])
@@ -558,7 +563,7 @@ class TemplateGUIPlugin(IPlugin):
             create_app()
 
             params = _read_python(params_path)
-            params['dtype'] = getattr(np, params['dtype'], 'int16')
+            params['dtype'] = np.dtype(params['dtype'])
 
             controller = TemplateController(**params)
             gui = controller.create_gui()
