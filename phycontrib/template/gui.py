@@ -113,6 +113,8 @@ filenames = {
 
     'features': 'pc_features.npy',
     'features_ind': 'pc_feature_ind.npy',
+    'features_spike_ids': 'pc_feature_spike_ids.npy',
+
     'template_features': 'template_features.npy',
     'template_features_ind': 'template_feature_ind.npy',
 
@@ -224,11 +226,21 @@ class TemplateController(Controller):
         if op.exists(filenames['features']):
             all_features = np.load(filenames['features'], mmap_mode='r')
             features_ind = read_array('features_ind').astype(np.int32)
+            # Feature subset.
+            if op.exists(filenames['features_spike_ids']):
+                features_spike_ids = read_array('features_spike_ids') \
+                    .astype(np.int32)
+                assert len(features_spike_ids) == len(all_features)
+                self.features_spike_ids = features_spike_ids
+                ns = len(features_spike_ids)
+            else:
+                ns = self.n_spikes
+                self.features_spike_ids = None
 
             assert all_features.ndim == 3
             n_loc_chan = all_features.shape[2]
             self.n_features_per_channel = all_features.shape[1]
-            assert all_features.shape == (self.n_spikes,
+            assert all_features.shape == (ns,
                                           self.n_features_per_channel,
                                           n_loc_chan,
                                           )
@@ -411,6 +423,14 @@ class TemplateController(Controller):
         spike_ids = self._select_spikes(cluster_id,
                                         self.n_spikes_features
                                         if not load_all else None)
+        # Only keep spikes belonging to the features spike ids.
+        # TODO: we may end up with very few spikes. It would be better
+        # to have a smarter subselection that takes features_spike_ids into
+        # account. A temporary work-around would be to just increase
+        # self.n_spikes_features so that the size of the average intersection
+        # is high enough.
+        if self.features_spike_ids is not None:
+            spike_ids = np.intersect1d(spike_ids, self.features_spike_ids)
         st = self.spike_templates[spike_ids]
         nc = self.n_channels
         nfpc = self.n_features_per_channel
