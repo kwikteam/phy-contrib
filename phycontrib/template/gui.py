@@ -18,8 +18,9 @@ import scipy.io as sio
 
 from phy.cluster.manual.controller import Controller
 from phy.cluster.manual.views import (select_traces, ScatterView)
-from phy.gui import create_app, run_app
+from phy.gui import create_app, run_app  # noqa
 from phy.io.array import concat_per_cluster, _concatenate_virtual_arrays
+from phy.utils.cli import _run_cmd
 from phy.stats.clusters import get_waveform_amplitude
 from phy.traces import SpikeLoader, WaveformLoader
 from phy.traces.filter import apply_filter, bandpass_filter
@@ -579,7 +580,8 @@ class TemplateGUIPlugin(IPlugin):
         # Create the `phy cluster-manual file.kwik` command.
         @cli.command('template-gui')
         @click.argument('params-path', type=click.Path(exists=True))
-        def cluster_manual(params_path):
+        @click.pass_context
+        def cluster_manual(ctx, params_path):
             """Launch the Template GUI on a params.py file."""
             # Create the Qt application.
             create_app()
@@ -591,6 +593,8 @@ class TemplateGUIPlugin(IPlugin):
             gui = controller.create_gui()
 
             gui.show()
-            run_app()
+
+            _run_cmd('run_app()', ctx, globals(), locals())
+
             gui.close()
             del gui
