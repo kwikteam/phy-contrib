@@ -23,6 +23,7 @@ from phy.io.array import (concat_per_cluster,
                           _concatenate_virtual_arrays,
                           _index_of,
                           )
+from phy.plot.transform import _normalize
 from phy.utils.cli import _run_cmd
 from phy.stats.clusters import get_waveform_amplitude
 from phy.traces import SpikeLoader, WaveformLoader
@@ -387,15 +388,17 @@ class TemplateController(Controller):
             self.get_cluster_pair_features)
 
     def get_waveforms(self, cluster_id):
+        m, M = self.get_waveform_lims()
         if self.all_waveforms is not None:
             # Waveforms.
             waveforms_b = self._select_data(cluster_id,
                                             self.all_waveforms,
                                             self.n_spikes_waveforms,
                                             )
-            m = waveforms_b.data.mean(axis=1).mean(axis=1)
+            mean = waveforms_b.data.mean(axis=1).mean(axis=1)
             waveforms_b.data = waveforms_b.data.astype(np.float64)
-            waveforms_b.data -= m[:, np.newaxis, np.newaxis]
+            waveforms_b.data -= mean[:, np.newaxis, np.newaxis]
+            waveforms_b.data = _normalize(waveforms_b.data, m, M)
         else:
             waveforms_b = None
         # Find the templates corresponding to the cluster.
@@ -411,6 +414,7 @@ class TemplateController(Controller):
                                         self.n_spikes_waveforms_lim)
         mean_amp = self.all_amplitudes[spike_ids].mean()
         tmp = templates * mean_amp
+        tmp = _normalize(tmp, m, M)
         template_b = Bunch(spike_ids=template_ids,
                            spike_clusters=template_ids,
                            data=tmp,
