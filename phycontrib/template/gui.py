@@ -19,7 +19,10 @@ import scipy.io as sio
 from phy.cluster.manual.controller import Controller
 from phy.cluster.manual.views import (select_traces, ScatterView)
 from phy.gui import create_app, run_app  # noqa
-from phy.io.array import concat_per_cluster, _concatenate_virtual_arrays
+from phy.io.array import (concat_per_cluster,
+                          _concatenate_virtual_arrays,
+                          _index_of,
+                          )
 from phy.utils.cli import _run_cmd
 from phy.stats.clusters import get_waveform_amplitude
 from phy.traces import SpikeLoader, WaveformLoader
@@ -421,22 +424,24 @@ class TemplateController(Controller):
 
     def get_features(self, cluster_id, load_all=False):
         # Overriden to take into account the sparse structure.
-        spike_ids = self._select_spikes(cluster_id,
-                                        self.n_spikes_features
-                                        if not load_all else None)
         # Only keep spikes belonging to the features spike ids.
-        # TODO: we may end up with very few spikes. It would be better
-        # to have a smarter subselection that takes features_spike_ids into
-        # account. A temporary work-around would be to just increase
-        # self.n_spikes_features so that the size of the average intersection
-        # is high enough.
         if self.features_spike_ids is not None:
+            # All spikes
+            spike_ids = self._select_spikes(cluster_id)
             spike_ids = np.intersect1d(spike_ids, self.features_spike_ids)
+            # Relative indices of the spikes in the self.features_spike_ids
+            # array, necessary to load features from all_features which only
+            # contains the subset of the spikes.
+            spike_ids_rel = _index_of(spike_ids, self.features_spike_ids)
+        else:
+            spike_ids = self._select_spikes(cluster_id,
+                                            self.n_spikes_features
+                                            if not load_all else None)
         st = self.spike_templates[spike_ids]
         nc = self.n_channels
         nfpc = self.n_features_per_channel
         ns = len(spike_ids)
-        f = _densify(spike_ids, self.all_features,
+        f = _densify(spike_ids_rel, self.all_features,
                      self.features_ind[st, :], self.n_channels)
         f = np.transpose(f, (0, 2, 1))
         assert f.shape == (ns, nc, nfpc)
