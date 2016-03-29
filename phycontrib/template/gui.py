@@ -437,6 +437,7 @@ class TemplateController(Controller):
             spike_ids = self._select_spikes(cluster_id,
                                             self.n_spikes_features
                                             if not load_all else None)
+            spike_ids_rel = spike_ids
         st = self.spike_templates[spike_ids]
         nc = self.n_channels
         nfpc = self.n_features_per_channel
