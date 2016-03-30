@@ -78,10 +78,11 @@ class KwikController(Controller):
 
     def create_gui(self, config_dir=None):
         """Create the kwik GUI."""
-        gui = super(KwikController, self).create_gui(name=self.gui_name,
-                                                     subtitle=self.path,
-                                                     config_dir=config_dir,
-                                                     )
+        f = super(KwikController, self).create_gui
+        gui = f(name=self.gui_name,
+                subtitle=self.path,
+                config_dir=config_dir,
+                )
 
         @self.manual_clustering.actions.add
         def recluster():
