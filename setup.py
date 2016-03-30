@@ -74,11 +74,12 @@ def _create_loader_file():
     plugins directory. This ensures that phycontrib's plugins are always
     loaded by phy."""
     # Make sure the plugins directory exists.
-    plugins_dir = op.expanduser('~/.phy/plugins/')
+    home = op.realpath(op.expanduser('~'))
+    plugins_dir = op.join(home, '.phy', 'plugins')
     if not op.exists(plugins_dir):
         os.makedirs(plugins_dir)
     # Create the script if it doesn't already exist.
-    path = plugins_dir + 'phycontrib_loader.py'
+    path = op.join(plugins_dir, 'phycontrib_loader.py')
     if op.exists(path):
         return
     with open(path, 'w') as f:

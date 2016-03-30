@@ -27,7 +27,8 @@ __version__ = '1.0.7'
 
 def _copy_gui_state(gui_name, module_name):
     """Copy the state.json file."""
-    gui_dir = op.expanduser('~/.phy/%s/' % gui_name)
+    home = op.realpath(op.expanduser('~'))
+    gui_dir = op.join(home, '.phy', gui_name)
     if not op.exists(gui_dir):
         os.makedirs(gui_dir)
     # Create the script if it doesn't already exist.
