@@ -32,7 +32,7 @@ def _copy_gui_state(gui_name, module_name):
     if not op.exists(gui_dir):
         os.makedirs(gui_dir)
     # Create the script if it doesn't already exist.
-    path = gui_dir + 'state.json'
+    path = op.join(gui_dir, 'state.json')
     if op.exists(path):
         return
     curdir = op.dirname(op.realpath(__file__))
