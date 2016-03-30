@@ -537,11 +537,12 @@ class TemplateController(Controller):
         v = FeatureTemplateView(coords=self.get_cluster_features)
         return self._add_view(gui, v)
 
-    def create_gui(self, plugins=None, config_dir=None):
+    def create_gui(self, config_dir=None):
         """Create the template GUI."""
-        create = super(TemplateController, self).create_gui
-        gui = create(name=self.gui_name, subtitle=self.dat_path,
-                     plugins=plugins, config_dir=config_dir)
+        gui = super(TemplateController, self)(name=self.gui_name,
+                                              subtitle=self.dat_path,
+                                              config_dir=config_dir,
+                                              )
 
         # Add custom views for the template GUI.
         if self.all_amplitudes is not None:

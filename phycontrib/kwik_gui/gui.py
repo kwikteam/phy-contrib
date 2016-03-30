@@ -21,8 +21,10 @@ logger = logging.getLogger(__name__)
 
 try:
     from klusta.kwik import KwikModel
-except ImportError:
+    from klusta.launch import cluster
+except ImportError as e:
     logger.warn("Package klusta not installed: the KwikGUI will not work.")
+    logger.exception(e)
 
 
 #------------------------------------------------------------------------------
@@ -74,18 +76,31 @@ class KwikController(Controller):
         self.all_features = m.all_features
         self.all_traces = m.all_traces
 
-    def create_gui(self, plugins=None, config_dir=None):
+    def create_gui(self, config_dir=None):
         """Create the kwik GUI."""
-        create = super(KwikController, self).create_gui
-        gui = create(name=self.gui_name, subtitle=self.path,
-                     plugins=plugins, config_dir=config_dir)
-        model = self.model
+        gui = super(KwikController, self).create_gui(name=self.gui_name,
+                                                     subtitle=self.path,
+                                                     config_dir=config_dir,
+                                                     )
+
+        @self.manual_clustering.actions.add
+        def recluster():
+            """Relaunch KlustaKwik on the selected clusters."""
+            # Selected clusters.
+            cluster_ids = self.manual_clustering.selected
+            spike_ids = self.selector.select_spikes(cluster_ids)
+            logger.info("Running KlustaKwik on %d spikes.", len(spike_ids))
+            spike_clusters, metadata = cluster(self.model,
+                                               spike_ids,
+                                               num_starting_clusters=10,
+                                               )
+            self.manual_clustering.split(spike_ids, spike_clusters)
 
         # Save.
         @gui.connect_
         def on_request_save(spike_clusters, groups):
             groups = {c: g.title() for c, g in groups.items()}
-            model.save(spike_clusters, groups)
+            self.model.save(spike_clusters, groups)
 
         return gui
 
