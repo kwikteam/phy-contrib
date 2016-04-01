@@ -141,8 +141,10 @@ def get_masks(templates):
     templates = np.abs(templates)
     m = templates.max(axis=1)  # (n_templates, n_channels)
     mm = m.max(axis=1)  # (n_templates,
+    ind = mm == 0
+    mm[ind] = 1
     masks = m / mm[:, np.newaxis]  # (n_templates, n_channels)
-    masks[mm == 0, :] = 0
+    masks[ind, :] = 0
     return masks
 
 
@@ -451,6 +453,11 @@ class TemplateController(Controller):
         f = np.transpose(f, (0, 2, 1))
         assert f.shape == (ns, nc, nfpc)
         b = Bunch()
+
+        # Normalize features.
+        m = self.get_feature_lim()
+        f = _normalize(f, -m, m)
+
         b.data = f
         b.spike_ids = spike_ids
         b.spike_clusters = self.spike_clusters[spike_ids]
