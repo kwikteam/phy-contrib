@@ -425,8 +425,9 @@ class TemplateController(Controller):
         mean_amp = self.all_amplitudes[spike_ids].mean()
         tmp = templates * mean_amp
         tmp = _normalize(tmp, m, M)
+        n = len(template_ids)
         template_b = Bunch(spike_ids=template_ids,
-                           spike_clusters=template_ids,
+                           spike_clusters=cluster_id * np.ones(n),
                            data=tmp,
                            masks=masks,
                            alpha=1.,
