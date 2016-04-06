@@ -294,7 +294,7 @@ class TemplateController(Controller):
 
         # Templates
         # Multiply the templates by the same scaling than for the traces.
-        self.templates = templates * scaling
+        self.templates = templates
         self.n_samples_templates = n_samples_templates
         self.n_samples_waveforms = n_samples_templates
         self.template_lim = np.max(np.abs(self.templates))
@@ -346,7 +346,7 @@ class TemplateController(Controller):
             waveforms = None
         self.all_waveforms = waveforms
 
-        self.template_masks = get_masks(templates)
+        self.template_masks = get_masks(self.templates)
         self.all_masks = MaskLoader(self.template_masks, self.spike_templates)
 
         # Read the cluster groups.
