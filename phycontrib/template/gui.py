@@ -279,14 +279,22 @@ class TemplateController(Controller):
         self.n_channels = n_channels
         # Take dead channels into account.
         if traces is not None:
-            traces = _concatenate_virtual_arrays([traces], channel_mapping)
+            # Find the scaling factor for the traces.
+            scaling = 1. / self._data_lim(traces[:10000])
+            traces = _concatenate_virtual_arrays([traces],
+                                                 channel_mapping,
+                                                 scaling=scaling,
+                                                 )
+        else:
+            scaling = 1.
 
         # Amplitudes
         self.all_amplitudes = amplitudes
         self.amplitudes_lim = self.all_amplitudes.max()
 
         # Templates
-        self.templates = templates
+        # Multiply the templates by the same scaling than for the traces.
+        self.templates = templates * scaling
         self.n_samples_templates = n_samples_templates
         self.n_samples_waveforms = n_samples_templates
         self.template_lim = np.max(np.abs(self.templates))
