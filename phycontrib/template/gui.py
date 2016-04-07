@@ -181,6 +181,7 @@ class TemplateController(Controller):
 
     def _init_data(self):
         if op.exists(self.dat_path):
+            logger.debug("Loading traces at `%s`.", self.dat_path)
             traces = _dat_to_traces(self.dat_path,
                                     n_channels=self.n_channels_dat,
                                     dtype=self.dtype or np.int16,
@@ -192,6 +193,7 @@ class TemplateController(Controller):
             traces = None
             n_samples_t = 0
 
+        logger.debug("Loading amplitudes.")
         amplitudes = read_array('amplitudes').squeeze()
         n_spikes, = amplitudes.shape
         self.n_spikes = n_spikes
@@ -200,37 +202,45 @@ class TemplateController(Controller):
         if not op.exists(filenames['spike_clusters']):
             shutil.copy(filenames['spike_templates'],
                         filenames['spike_clusters'])
+        logger.debug("Loading spike clusters.")
         spike_clusters = read_array('spike_clusters').squeeze()
         spike_clusters = spike_clusters.astype(np.int32)
         assert spike_clusters.shape == (n_spikes,)
         self.spike_clusters = spike_clusters
 
+        logger.debug("Loading spike templates.")
         spike_templates = read_array('spike_templates').squeeze()
         spike_templates = spike_templates.astype(np.int32)
         assert spike_templates.shape == (n_spikes,)
         self.spike_templates = spike_templates
 
+        logger.debug("Loading spike samples.")
         spike_samples = read_array('spike_samples').squeeze()
         assert spike_samples.shape == (n_spikes,)
 
+        logger.debug("Loading templates.")
         templates = read_array('templates')
         templates[np.isnan(templates)] = 0
         # templates = np.transpose(templates, (2, 1, 0))
         n_templates, n_samples_templates, n_channels = templates.shape
         self.n_templates = n_templates
 
+        logger.debug("Loading similar templates.")
         self.similar_templates = read_array('similar_templates')
         assert self.similar_templates.shape == (self.n_templates,
                                                 self.n_templates)
 
+        logger.debug("Loading channel mapping.")
         channel_mapping = read_array('channel_mapping').squeeze()
         channel_mapping = channel_mapping.astype(np.int32)
         assert channel_mapping.shape == (n_channels,)
 
+        logger.debug("Loading channel positions.")
         channel_positions = read_array('channel_positions')
         assert channel_positions.shape == (n_channels, 2)
 
         if op.exists(filenames['features']):
+            logger.debug("Loading features.")
             all_features = np.load(filenames['features'], mmap_mode='r')
             features_ind = read_array('features_ind').astype(np.int32)
             # Feature subset.
@@ -261,6 +271,7 @@ class TemplateController(Controller):
         self.features_ind = features_ind
 
         if op.exists(filenames['template_features']):
+            logger.debug("Loading template features.")
             template_features = np.load(filenames['template_features'],
                                         mmap_mode='r')
             template_features_ind = read_array('template_features_ind'). \
@@ -300,8 +311,13 @@ class TemplateController(Controller):
         self.template_lim = np.max(np.abs(self.templates))
 
         # Unwhiten the templates.
+        logger.debug("Loading the whitening matrix.")
         self.whitening_matrix = read_array('whitening_matrix')
+        logger.debug("Inversing the whitening matrix %s.",
+                     self.whitening_matrix.shape)
         wmi = np.linalg.inv(self.whitening_matrix)
+        logger.debug("Unwhitening the templates %s.",
+                     self.templates.shape)
         self.templates_unw = np.dot(self.templates, wmi)
 
         self.duration = n_samples_t / float(self.sample_rate)
@@ -350,6 +366,7 @@ class TemplateController(Controller):
         self.all_masks = MaskLoader(self.template_masks, self.spike_templates)
 
         # Read the cluster groups.
+        logger.debug("Loading the cluster groups.")
         self.cluster_groups = {}
         if op.exists(filenames['cluster_groups']):
             with open(filenames['cluster_groups'], 'r') as f:
