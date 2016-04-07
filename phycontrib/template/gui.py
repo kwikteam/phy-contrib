@@ -538,7 +538,7 @@ class TemplateController(Controller):
                                     )
 
         return [Bunch(traces=tr),
-                Bunch(traces=tr_sub, color=(.25, .25, .25, .75)),
+                Bunch(traces=tr_sub, color=(.5, .5, .5, .75)),
                 ]
 
     def similarity(self, cluster_id):
