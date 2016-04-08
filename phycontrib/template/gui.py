@@ -54,7 +54,8 @@ def _dat_to_traces(dat_path, n_channels=None, dtype=None, offset=None):
                                dtype=dtype,
                                offset=offset,
                                )
-    return np.memmap(dat_path, dtype=dtype, shape=(n_samples, n_channels))
+    return np.memmap(dat_path, dtype=dtype, shape=(n_samples, n_channels),
+                     offset=offset)
 
 
 #------------------------------------------------------------------------------
