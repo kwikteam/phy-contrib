@@ -14,6 +14,7 @@ import shutil
 
 from .kwik_gui import KwikGUIPlugin, KwikController  # noqa
 from .template import TemplateGUIPlugin, TemplateController  # noqa
+from . import utils  # noqa
 
 logger = logging.getLogger(__name__)
 
