@@ -23,6 +23,7 @@ from phy.io.array import (concat_per_cluster,
                           _concatenate_virtual_arrays,
                           _index_of,
                           )
+from phy.plot.transform import _normalize
 from phy.utils.cli import _run_cmd
 from phy.stats.clusters import get_waveform_amplitude
 from phy.traces import SpikeLoader, WaveformLoader
@@ -141,8 +142,10 @@ def get_masks(templates):
     templates = np.abs(templates)
     m = templates.max(axis=1)  # (n_templates, n_channels)
     mm = m.max(axis=1)  # (n_templates,
+    ind = mm == 0
+    mm[ind] = 1
     masks = m / mm[:, np.newaxis]  # (n_templates, n_channels)
-    masks[mm == 0, :] = 0
+    masks[ind, :] = 0
     return masks
 
 
@@ -179,6 +182,7 @@ class TemplateController(Controller):
 
     def _init_data(self):
         if op.exists(self.dat_path):
+            logger.debug("Loading traces at `%s`.", self.dat_path)
             traces = _dat_to_traces(self.dat_path,
                                     n_channels=self.n_channels_dat,
                                     dtype=self.dtype or np.int16,
@@ -190,6 +194,7 @@ class TemplateController(Controller):
             traces = None
             n_samples_t = 0
 
+        logger.debug("Loading amplitudes.")
         amplitudes = read_array('amplitudes').squeeze()
         n_spikes, = amplitudes.shape
         self.n_spikes = n_spikes
@@ -198,37 +203,45 @@ class TemplateController(Controller):
         if not op.exists(filenames['spike_clusters']):
             shutil.copy(filenames['spike_templates'],
                         filenames['spike_clusters'])
+        logger.debug("Loading spike clusters.")
         spike_clusters = read_array('spike_clusters').squeeze()
         spike_clusters = spike_clusters.astype(np.int32)
         assert spike_clusters.shape == (n_spikes,)
         self.spike_clusters = spike_clusters
 
+        logger.debug("Loading spike templates.")
         spike_templates = read_array('spike_templates').squeeze()
         spike_templates = spike_templates.astype(np.int32)
         assert spike_templates.shape == (n_spikes,)
         self.spike_templates = spike_templates
 
+        logger.debug("Loading spike samples.")
         spike_samples = read_array('spike_samples').squeeze()
         assert spike_samples.shape == (n_spikes,)
 
+        logger.debug("Loading templates.")
         templates = read_array('templates')
         templates[np.isnan(templates)] = 0
         # templates = np.transpose(templates, (2, 1, 0))
         n_templates, n_samples_templates, n_channels = templates.shape
         self.n_templates = n_templates
 
+        logger.debug("Loading similar templates.")
         self.similar_templates = read_array('similar_templates')
         assert self.similar_templates.shape == (self.n_templates,
                                                 self.n_templates)
 
+        logger.debug("Loading channel mapping.")
         channel_mapping = read_array('channel_mapping').squeeze()
         channel_mapping = channel_mapping.astype(np.int32)
         assert channel_mapping.shape == (n_channels,)
 
+        logger.debug("Loading channel positions.")
         channel_positions = read_array('channel_positions')
         assert channel_positions.shape == (n_channels, 2)
 
         if op.exists(filenames['features']):
+            logger.debug("Loading features.")
             all_features = np.load(filenames['features'], mmap_mode='r')
             features_ind = read_array('features_ind').astype(np.int32)
             # Feature subset.
@@ -259,6 +272,7 @@ class TemplateController(Controller):
         self.features_ind = features_ind
 
         if op.exists(filenames['template_features']):
+            logger.debug("Loading template features.")
             template_features = np.load(filenames['template_features'],
                                         mmap_mode='r')
             template_features_ind = read_array('template_features_ind'). \
@@ -277,21 +291,34 @@ class TemplateController(Controller):
         self.n_channels = n_channels
         # Take dead channels into account.
         if traces is not None:
-            traces = _concatenate_virtual_arrays([traces], channel_mapping)
+            # Find the scaling factor for the traces.
+            scaling = 1. / self._data_lim(traces[:10000])
+            traces = _concatenate_virtual_arrays([traces],
+                                                 channel_mapping,
+                                                 scaling=scaling,
+                                                 )
+        else:
+            scaling = 1.
 
         # Amplitudes
         self.all_amplitudes = amplitudes
         self.amplitudes_lim = self.all_amplitudes.max()
 
         # Templates
+        # Multiply the templates by the same scaling than for the traces.
         self.templates = templates
         self.n_samples_templates = n_samples_templates
         self.n_samples_waveforms = n_samples_templates
         self.template_lim = np.max(np.abs(self.templates))
 
         # Unwhiten the templates.
+        logger.debug("Loading the whitening matrix.")
         self.whitening_matrix = read_array('whitening_matrix')
+        logger.debug("Inversing the whitening matrix %s.",
+                     self.whitening_matrix.shape)
         wmi = np.linalg.inv(self.whitening_matrix)
+        logger.debug("Unwhitening the templates %s.",
+                     self.templates.shape)
         self.templates_unw = np.dot(self.templates, wmi)
 
         self.duration = n_samples_t / float(self.sample_rate)
@@ -336,10 +363,11 @@ class TemplateController(Controller):
             waveforms = None
         self.all_waveforms = waveforms
 
-        self.template_masks = get_masks(templates)
+        self.template_masks = get_masks(self.templates)
         self.all_masks = MaskLoader(self.template_masks, self.spike_templates)
 
         # Read the cluster groups.
+        logger.debug("Loading the cluster groups.")
         self.cluster_groups = {}
         if op.exists(filenames['cluster_groups']):
             with open(filenames['cluster_groups'], 'r') as f:
@@ -388,15 +416,17 @@ class TemplateController(Controller):
             self.get_cluster_pair_features)
 
     def get_waveforms(self, cluster_id):
+        m, M = self.get_waveform_lims()
         if self.all_waveforms is not None:
             # Waveforms.
             waveforms_b = self._select_data(cluster_id,
                                             self.all_waveforms,
                                             self.n_spikes_waveforms,
                                             )
-            m = waveforms_b.data.mean(axis=1).mean(axis=1)
+            mean = waveforms_b.data.mean(axis=1).mean(axis=1)
             waveforms_b.data = waveforms_b.data.astype(np.float64)
-            waveforms_b.data -= m[:, np.newaxis, np.newaxis]
+            waveforms_b.data -= mean[:, np.newaxis, np.newaxis]
+            waveforms_b.data = _normalize(waveforms_b.data, m, M)
         else:
             waveforms_b = None
         # Find the templates corresponding to the cluster.
@@ -412,8 +442,10 @@ class TemplateController(Controller):
                                         self.n_spikes_waveforms_lim)
         mean_amp = self.all_amplitudes[spike_ids].mean()
         tmp = templates * mean_amp
+        tmp = _normalize(tmp, m, M)
+        n = len(template_ids)
         template_b = Bunch(spike_ids=template_ids,
-                           spike_clusters=template_ids,
+                           spike_clusters=cluster_id * np.ones(n),
                            data=tmp,
                            masks=masks,
                            alpha=1.,
@@ -448,6 +480,11 @@ class TemplateController(Controller):
         f = np.transpose(f, (0, 2, 1))
         assert f.shape == (ns, nc, nfpc)
         b = Bunch()
+
+        # Normalize features.
+        m = self.get_feature_lim()
+        f = _normalize(f, -m, m)
+
         b.data = f
         b.spike_ids = spike_ids
         b.spike_clusters = self.spike_clusters[spike_ids]
@@ -519,7 +556,7 @@ class TemplateController(Controller):
                                     )
 
         return [Bunch(traces=tr),
-                Bunch(traces=tr_sub, color=(.25, .25, .25, .75)),
+                Bunch(traces=tr_sub, color=(.5, .5, .5, .75)),
                 ]
 
     def similarity(self, cluster_id):
