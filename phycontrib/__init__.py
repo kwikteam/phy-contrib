@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Default config and state files
 #------------------------------------------------------------------------------
 
-__version__ = '1.0.8'
+__version__ = '1.0.9'
 
 
 def _copy_gui_state(gui_name, module_name):
