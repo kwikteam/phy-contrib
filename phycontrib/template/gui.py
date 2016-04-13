@@ -112,6 +112,7 @@ filenames = {
     'spike_samples': 'spike_times.npy',
     'amplitudes': 'amplitudes.npy',
     'templates': 'templates.npy',
+    'templates_unw': 'templates_unw.npy',
 
     'channel_mapping': 'channel_map.npy',
     'channel_positions': 'channel_positions.npy',
@@ -223,6 +224,24 @@ class TemplateController(Controller):
         templates = read_array('templates')
         templates[np.isnan(templates)] = 0
         # templates = np.transpose(templates, (2, 1, 0))
+
+        # Unwhiten the templates.
+        logger.debug("Loading the whitening matrix.")
+        self.whitening_matrix = read_array('whitening_matrix')
+
+        if op.exists(filenames['templates_unw']):
+            logger.debug("Loading unwhitened templates.")
+            templates_unw = read_array('templates_unw')
+            templates_unw[np.isnan(templates_unw)] = 0
+        else:
+            logger.debug("Couldn't find unwhitened templates, computing them.")
+            logger.debug("Inversing the whitening matrix %s.",
+                         self.whitening_matrix.shape)
+            wmi = np.linalg.inv(self.whitening_matrix)
+            logger.debug("Unwhitening the templates %s.",
+                         templates.shape)
+            templates_unw = np.dot(templates, wmi)
+
         n_templates, n_samples_templates, n_channels = templates.shape
         self.n_templates = n_templates
 
@@ -235,6 +254,8 @@ class TemplateController(Controller):
         channel_mapping = read_array('channel_mapping').squeeze()
         channel_mapping = channel_mapping.astype(np.int32)
         assert channel_mapping.shape == (n_channels,)
+        # Ensure that the mappings maps to valid columns in the dat file.
+        assert np.all(channel_mapping <= self.n_channels_dat - 1)
 
         logger.debug("Loading channel positions.")
         channel_positions = read_array('channel_positions')
@@ -305,21 +326,12 @@ class TemplateController(Controller):
         self.amplitudes_lim = self.all_amplitudes.max()
 
         # Templates
-        # Multiply the templates by the same scaling than for the traces.
         self.templates = templates
+        self.templates_unw = templates_unw
+        assert self.templates.shape == self.templates_unw.shape
         self.n_samples_templates = n_samples_templates
         self.n_samples_waveforms = n_samples_templates
         self.template_lim = np.max(np.abs(self.templates))
-
-        # Unwhiten the templates.
-        logger.debug("Loading the whitening matrix.")
-        self.whitening_matrix = read_array('whitening_matrix')
-        logger.debug("Inversing the whitening matrix %s.",
-                     self.whitening_matrix.shape)
-        wmi = np.linalg.inv(self.whitening_matrix)
-        logger.debug("Unwhitening the templates %s.",
-                     self.templates.shape)
-        self.templates_unw = np.dot(self.templates, wmi)
 
         self.duration = n_samples_t / float(self.sample_rate)
 
@@ -414,6 +426,24 @@ class TemplateController(Controller):
         self.get_cluster_templates = ctx.cache(self.get_cluster_templates)
         self.get_cluster_pair_features = ctx.cache(
             self.get_cluster_pair_features)
+
+    def get_waveform_lims(self):
+        n_spikes = self.n_spikes_waveforms_lim
+        arr = self.all_waveforms
+        n = arr.shape[0]
+        k = max(1, n // n_spikes)
+        # Extract waveforms.
+        arr = arr[::k].astype(np.float64)
+        mean = arr.mean(axis=1).mean(axis=1)
+        arr -= mean[:, np.newaxis, np.newaxis]
+        # Take the corresponding masks.
+        masks = self.all_masks[::k].copy()
+        arr = arr * masks[:, np.newaxis, :]
+        # NOTE: on some datasets, there are a few outliers that screw up
+        # the normalization. These parameters should be customizable.
+        m = np.percentile(arr, .05)
+        M = np.percentile(arr, 99.95)
+        return m, M
 
     def get_waveforms(self, cluster_id):
         m, M = self.get_waveform_lims()
