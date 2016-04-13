@@ -22,9 +22,8 @@ logger = logging.getLogger(__name__)
 try:
     from klusta.kwik import KwikModel
     from klusta.launch import cluster
-except ImportError as e:
+except ImportError:
     logger.warn("Package klusta not installed: the KwikGUI will not work.")
-    logger.exception(e)
 
 
 #------------------------------------------------------------------------------
