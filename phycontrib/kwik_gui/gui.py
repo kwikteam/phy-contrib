@@ -138,6 +138,13 @@ class KwikGUIPlugin(IPlugin):
 
         @cli.command('kwik-describe')
         @click.argument('path', type=click.Path(exists=True))
-        def describe(path):
+        @click.option('--channel-group', type=int,
+                      help='channel group')
+        @click.option('--clustering', type=str,
+                      help='clustering')
+        def describe(path, channel_group=0, clustering='main'):
             """Describe a Kwik file."""
-            KwikModel(path).describe()
+            KwikModel(path,
+                      channel_group=channel_group,
+                      clustering=clustering,
+                      ).describe()
