@@ -34,7 +34,7 @@ def _backup(path):
     """Backup a file."""
     path_backup = path + '.bak'
     if not op.exists(path_backup):
-        logger.info("Backup `%s`.".format(path_backup))
+        logger.info("Backup `{0}`.".format(path_backup))
         shutil.copy(path, path_backup)
 
 
