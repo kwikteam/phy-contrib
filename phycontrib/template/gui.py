@@ -9,6 +9,7 @@
 
 import csv
 import logging
+from operator import itemgetter
 import os.path as op
 import shutil
 
@@ -422,10 +423,13 @@ class TemplateController(Controller):
         super(TemplateController, self)._init_context()
         ctx = self.context
         self.get_amplitudes = concat_per_cluster(
-            ctx.cache(self.get_amplitudes))
-        self.get_cluster_templates = ctx.cache(self.get_cluster_templates)
-        self.get_cluster_pair_features = ctx.cache(
+            ctx.memcache(self.get_amplitudes))
+        self.get_cluster_templates = ctx.memcache(self.get_cluster_templates)
+        self.get_cluster_pair_features = ctx.memcache(
             self.get_cluster_pair_features)
+        self._cluster_template_similarities = ctx.memcache(
+            self._cluster_template_similarities)
+        self._sim_ij = ctx.memcache(self._sim_ij)
 
     def get_waveform_lims(self):
         n_spikes = self.n_spikes_waveforms_lim
@@ -589,13 +593,25 @@ class TemplateController(Controller):
                 Bunch(traces=tr_sub, color=(.5, .5, .5, .75)),
                 ]
 
+    def _cluster_template_similarities(self, cluster_id):
+        # Templates of the cluster.
+        temp = np.nonzero(self.get_cluster_templates(cluster_id))[0]
+        # Max similarity of cluster_id with all templates.
+        return np.max(self.similar_templates[temp, :], axis=0)
+
+    def _sim_ij(self, ci, cj):
+        """Similarity between two clusters."""
+        # The similarity of the cluster with each template.
+        sims = self._cluster_template_similarities(ci)
+        # Templates of the cluster.
+        if cj < self.n_templates:
+            return sims[cj]
+        temp = np.nonzero(self.get_cluster_templates(cj))[0]
+        return np.max(sims[temp])
+
     def similarity(self, cluster_id):
-        count = self.get_cluster_templates(cluster_id)
-        # Load the templates similar to the largest parent template.
-        largest_template = np.argmax(count)
-        sim = self.similar_templates[largest_template]
-        templates = np.argsort(sim)[::-1]
-        return [(int(c), sim[c]) for i, c in enumerate(templates)]
+        out = [(cj, self._sim_ij(cluster_id, cj)) for cj in self.cluster_ids]
+        return sorted(out, key=itemgetter(1), reverse=True)
 
     def add_amplitude_view(self, gui):
         v = AmplitudeView(coords=self.get_amplitudes)
