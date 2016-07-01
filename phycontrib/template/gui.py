@@ -139,6 +139,10 @@ def read_array(name):
         return np.load(fn)
 
 
+def write_array(name, arr):
+    np.save(name, arr)
+
+
 def get_masks(templates):
     n_templates, n_samples_templates, n_channels = templates.shape
     templates = np.abs(templates)
@@ -205,7 +209,7 @@ class TemplateController(Controller):
         if not op.exists(filenames['spike_clusters']):
             shutil.copy(filenames['spike_templates'],
                         filenames['spike_clusters'])
-        logger.debug("Loading spike clusters.")
+        logger.debug("Loading %d spike clusters.", self.n_spikes)
         spike_clusters = read_array('spike_clusters').squeeze()
         spike_clusters = spike_clusters.astype(np.int32)
         assert spike_clusters.shape == (n_spikes,)
@@ -241,7 +245,10 @@ class TemplateController(Controller):
             wmi = np.linalg.inv(self.whitening_matrix)
             logger.debug("Unwhitening the templates %s.",
                          templates.shape)
-            templates_unw = np.dot(templates, wmi)
+            templates_unw = np.dot(np.ascontiguousarray(templates),
+                                   np.ascontiguousarray(wmi))
+            # Save the unwhitened templates.
+            write_array('templates_unw.npy', templates_unw)
 
         n_templates, n_samples_templates, n_channels = templates.shape
         self.n_templates = n_templates
