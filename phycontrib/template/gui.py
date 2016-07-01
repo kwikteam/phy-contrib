@@ -23,6 +23,7 @@ from phy.gui import create_app, run_app  # noqa
 from phy.io.array import (concat_per_cluster,
                           _concatenate_virtual_arrays,
                           _index_of,
+                          _unique,
                           )
 from phy.plot.transform import _normalize
 from phy.utils.cli import _run_cmd
@@ -349,7 +350,7 @@ class TemplateController(Controller):
         self.spike_times = spike_samples / float(self.sample_rate)
         assert np.all(np.diff(self.spike_times) >= 0)
 
-        self.cluster_ids = np.unique(self.spike_clusters)
+        self.cluster_ids = _unique(self.spike_clusters)
         # n_clusters = len(self.cluster_ids)
 
         self.channel_positions = channel_positions
