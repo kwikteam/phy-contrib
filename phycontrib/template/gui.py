@@ -470,6 +470,7 @@ class TemplateController(Controller):
                                             self.all_waveforms,
                                             self.n_spikes_waveforms,
                                             )
+            waveforms_b.mask_threshold = self.waveform_mask_treshold
             mean = waveforms_b.data.mean(axis=1).mean(axis=1)
             waveforms_b.data = waveforms_b.data.astype(np.float64)
             waveforms_b.data -= mean[:, np.newaxis, np.newaxis]
@@ -496,6 +497,7 @@ class TemplateController(Controller):
                            data=tmp,
                            masks=masks,
                            alpha=1.,
+                           mask_threshold=0.,
                            )
         if waveforms_b is not None:
             return [waveforms_b, template_b]
