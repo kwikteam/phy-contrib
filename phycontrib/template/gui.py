@@ -544,7 +544,6 @@ class TemplateController(Controller):
         spike_ids = self._select_spikes(cluster_id, self.n_spikes_features)
         d = Bunch()
         d.spike_ids = spike_ids
-        d.spike_clusters = cluster_id * np.ones(len(spike_ids), dtype=np.int32)
         d.x = self.spike_times[spike_ids]
         d.y = self.all_amplitudes[spike_ids]
         return d
@@ -571,12 +570,8 @@ class TemplateController(Controller):
         x1 = np.sum(tj * ni[np.newaxis, :], axis=1) / ni.sum()
         y1 = np.sum(tj * nj[np.newaxis, :], axis=1) / nj.sum()
 
-        d = Bunch()
-        d.x = np.hstack((x0, x1))
-        d.y = np.hstack((y0, y1))
-        d.spike_ids = np.hstack((si, sj))
-        d.spike_clusters = self.spike_clusters[d.spike_ids]
-        return d
+        return [Bunch(x=x0, y=y0, spike_ids=si),
+                Bunch(x=x1, y=y1, spike_ids=sj)]
 
     def get_cluster_features(self, cluster_ids):
         if len(cluster_ids) < 2:
