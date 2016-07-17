@@ -28,7 +28,7 @@ from phy.io.array import (concat_per_cluster,
 from phy.plot.transform import _normalize
 from phy.utils.cli import _run_cmd
 from phy.stats.clusters import get_waveform_amplitude
-from phy.traces import SpikeLoader, WaveformLoader
+from phy.traces import WaveformLoader
 from phy.traces.filter import apply_filter, bandpass_filter
 from phy.utils import Bunch, IPlugin
 from phy.utils._misc import _read_python
@@ -368,27 +368,27 @@ class TemplateController(Controller):
         # are not already filtered.
         if not getattr(self, 'hp_filtered', False):
             logger.debug("HP filtering the data for waveforms")
-
-            def the_filter(x, axis=0):
-                return apply_filter(x, b_filter, axis=axis)
+            filter_order = 3
         else:
-            the_filter = None
+            filter_order = None
+
+        self.template_masks = get_masks(self.templates)
+        self.all_masks = MaskLoader(self.template_masks, self.spike_templates)
 
         # Fetch waveforms from traces.
         nsw = self.n_samples_waveforms
         if traces is not None:
             waveforms = WaveformLoader(traces=traces,
+                                       masks=self.all_masks,
+                                       spike_samples=spike_samples,
                                        n_samples_waveforms=nsw,
-                                       filter=the_filter,
-                                       filter_margin=filter_margin,
+                                       filter_order=filter_order,
+                                       sample_rate=self.sample_rate,
+                                       mask_threshold=self.waveform_mask_threshold,  # noqa
                                        )
-            waveforms = SpikeLoader(waveforms, spike_samples)
         else:
             waveforms = None
         self.all_waveforms = waveforms
-
-        self.template_masks = get_masks(self.templates)
-        self.all_masks = MaskLoader(self.template_masks, self.spike_templates)
 
         # Read the cluster groups.
         logger.debug("Loading the cluster groups.")
