@@ -1,4 +1,3 @@
-import os
 import os.path as op
 
 from tqdm import tqdm
