@@ -29,7 +29,6 @@ from phy.plot.transform import _normalize
 from phy.utils.cli import _run_cmd
 from phy.stats.clusters import get_waveform_amplitude
 from phy.traces import WaveformLoader
-from phy.traces.filter import apply_filter, bandpass_filter
 from phy.utils import Bunch, IPlugin
 from phy.utils._misc import _read_python
 
@@ -356,14 +355,6 @@ class TemplateController(Controller):
         self.channel_positions = channel_positions
         self.all_traces = traces
 
-        # Filter the waveforms.
-        order = 3
-        filter_margin = order * 3
-        b_filter = bandpass_filter(rate=self.sample_rate,
-                                   low=500.,
-                                   high=self.sample_rate * .475,
-                                   order=order)
-
         # Only filter the data for the waveforms if the traces
         # are not already filtered.
         if not getattr(self, 'hp_filtered', False):
@@ -563,12 +554,12 @@ class TemplateController(Controller):
         nj = self.get_cluster_templates(cj)
 
         ti = self._get_template_features(si)
-        x0 = np.sum(ti * ni[np.newaxis, :], axis=1) / ni.sum()
-        y0 = np.sum(ti * nj[np.newaxis, :], axis=1) / nj.sum()
+        x0 = np.average(ti, weights=ni, axis=1)
+        y0 = np.average(ti, weights=nj, axis=1)
 
         tj = self._get_template_features(sj)
-        x1 = np.sum(tj * ni[np.newaxis, :], axis=1) / ni.sum()
-        y1 = np.sum(tj * nj[np.newaxis, :], axis=1) / nj.sum()
+        x1 = np.average(tj, weights=ni, axis=1)
+        y1 = np.average(tj, weights=nj, axis=1)
 
         return [Bunch(x=x0, y=y0, spike_ids=si),
                 Bunch(x=x1, y=y1, spike_ids=sj)]
@@ -678,6 +669,15 @@ class TemplateController(Controller):
 # Template GUI plugin
 #------------------------------------------------------------------------------
 
+def _run(params):
+    controller = TemplateController(**params)
+    gui = controller.create_gui()
+    gui.show()
+    run_app()
+    gui.close()
+    del gui
+
+
 class TemplateGUIPlugin(IPlugin):
     """Create the `phy template-gui` command for Kwik files."""
 
@@ -695,12 +695,4 @@ class TemplateGUIPlugin(IPlugin):
             params = _read_python(params_path)
             params['dtype'] = np.dtype(params['dtype'])
 
-            controller = TemplateController(**params)
-            gui = controller.create_gui()
-
-            gui.show()
-
-            _run_cmd('run_app()', ctx, globals(), locals())
-
-            gui.close()
-            del gui
+            _run_cmd('_run(params)', ctx, globals(), locals())
