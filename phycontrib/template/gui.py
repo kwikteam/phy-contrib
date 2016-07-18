@@ -461,11 +461,18 @@ class TemplateController(Controller):
                                             self.all_waveforms,
                                             self.n_spikes_waveforms,
                                             )
-            waveforms_b.mask_threshold = self.waveform_mask_threshold
-            mean = waveforms_b.data.mean(axis=1).mean(axis=1)
-            waveforms_b.data = waveforms_b.data.astype(np.float64)
-            waveforms_b.data -= mean[:, np.newaxis, np.newaxis]
-            waveforms_b.data = _normalize(waveforms_b.data, m, M)
+            # waveforms_b.mask_threshold = self.waveform_mask_threshold
+            w = waveforms_b.data
+            # Sparsify.
+            channels = np.nonzero(w.mean(axis=1).mean(axis=0))[0]
+            w = w[:, :, channels]
+            waveforms_b.channels = channels
+            # Normalize.
+            mean = w.mean(axis=1).mean(axis=1)
+            w = w.astype(np.float64)
+            w -= mean[:, np.newaxis, np.newaxis]
+            w = _normalize(w, m, M)
+            waveforms_b.data = w
         else:
             waveforms_b = None
         # Find the templates corresponding to the cluster.
