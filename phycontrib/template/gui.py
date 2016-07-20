@@ -696,7 +696,6 @@ class TemplateGUIPlugin(IPlugin):
         @click.pass_context
         def cluster_manual(ctx, params_path):
             """Launch the Template GUI on a params.py file."""
-            # Create the Qt application.
             create_app()
 
             params = _read_python(params_path)

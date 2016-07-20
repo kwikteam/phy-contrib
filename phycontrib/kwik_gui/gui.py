@@ -14,8 +14,9 @@ import shutil
 import click
 
 from phy import IPlugin
-from phy.gui import create_app, run_app
 from phy.cluster.manual.controller import Controller
+from phy.gui import create_app, run_app
+from phy.utils.cli import _run_cmd
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +112,18 @@ class KwikController(Controller):
 # Kwik GUI plugin
 #------------------------------------------------------------------------------
 
+def _run(path, channel_group, clustering):
+    controller = KwikController(path,
+                                channel_group=channel_group,
+                                clustering=clustering,
+                                )
+    gui = controller.create_gui()
+    gui.show()
+    run_app()
+    gui.close()
+    del gui
+
+
 class KwikGUIPlugin(IPlugin):
     """Create the `phy cluster-manual` command for Kwik files."""
 
@@ -121,22 +134,12 @@ class KwikGUIPlugin(IPlugin):
         @click.argument('path', type=click.Path(exists=True))
         @click.option('--channel-group', type=int)
         @click.option('--clustering', type=str)
-        def cluster_manual(path, channel_group=None, clustering=None):
+        @click.pass_context
+        def cluster_manual(ctx, path, channel_group=None, clustering=None):
             """Launch the Kwik GUI on a Kwik file."""
-
-            # Create the Qt application.
             create_app()
-
-            controller = KwikController(path,
-                                        channel_group=channel_group,
-                                        clustering=clustering,
-                                        )
-            gui = controller.create_gui()
-
-            gui.show()
-            run_app()
-            gui.close()
-            del gui
+            _run_cmd('_run(path, channel_group, clustering)',
+                     ctx, globals(), locals())
 
         @cli.command('kwik-describe')
         @click.argument('path', type=click.Path(exists=True))
