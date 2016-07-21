@@ -24,6 +24,7 @@ from phy.io.array import (concat_per_cluster,
                           _concatenate_virtual_arrays,
                           _index_of,
                           _unique,
+                          get_excerpts,
                           )
 from phy.plot.transform import _normalize
 from phy.utils.cli import _run_cmd
@@ -143,16 +144,25 @@ def write_array(name, arr):
     np.save(name, arr)
 
 
-def get_masks(templates):
+def get_masks(templates, channel_noise):
     n_templates, n_samples_templates, n_channels = templates.shape
-    templates = np.abs(templates)
-    m = templates.max(axis=1)  # (n_templates, n_channels)
-    mm = m.max(axis=1)  # (n_templates,
-    ind = mm == 0
-    mm[ind] = 1
-    masks = m / mm[:, np.newaxis]  # (n_templates, n_channels)
-    masks[ind, :] = 0
-    return masks
+    assert channel_noise.shape == (n_channels,)
+    # Template max.
+    amp = templates.max(axis=1)  # (n_templates, n_channels)
+    # Template min.
+    mi = templates.min(axis=1)  # (n_templates, n_channels)
+    # Template amplitudes across all channels.
+    amp -= mi  # (n_templates, n_channels)
+    # Divide by the channel noise.
+    amp /= channel_noise[np.newaxis, :]
+    # Clip between 0 and 1.
+    amp[...] = np.clip(amp, 0, 1)
+    # The best channel for each template.
+    best = np.argmax(amp, axis=1)
+    # Make sure that there is at least one channel mask=1 for each template.
+    amp[np.arange(n_templates), best] = 1
+    assert amp.shape == (n_templates, n_channels)
+    return amp
 
 
 class MaskLoader(object):
@@ -363,7 +373,8 @@ class TemplateController(Controller):
         else:
             filter_order = None
 
-        self.template_masks = get_masks(self.templates)
+        self.channel_noise = self.get_channel_noise()
+        self.template_masks = get_masks(self.templates, self.channel_noise)
         self.all_masks = MaskLoader(self.template_masks, self.spike_templates)
 
         # Fetch waveforms from traces.
@@ -403,6 +414,10 @@ class TemplateController(Controller):
         st = self.spike_templates[spike_ids]
         return np.bincount(st, minlength=self.n_templates)
 
+    def get_channel_noise(self):
+        ex = get_excerpts(self.all_traces, n_excerpts=100, excerpt_size=100)
+        return ex.std(axis=0)
+
     def get_background_features(self):
         # Disable for now
         pass
@@ -414,7 +429,7 @@ class TemplateController(Controller):
         template_id = np.argmax(nt)
         # Find the masked template waveform amplitude.
         mw = self.templates[[template_id]]
-        mm = get_masks(mw)
+        mm = get_masks(mw, self.channel_noise)
         mw = mw[0, ...]
         mm = mm[0, ...]
         assert mw.ndim == 2
@@ -432,6 +447,8 @@ class TemplateController(Controller):
         self._cluster_template_similarities = ctx.memcache(
             self._cluster_template_similarities)
         self._sim_ij = ctx.memcache(self._sim_ij)
+
+        self.get_channel_noise = ctx.cache(self.get_channel_noise)
 
     def get_waveform_lims(self):
         n_spikes = self.n_spikes_waveforms_lim
@@ -473,6 +490,7 @@ class TemplateController(Controller):
             w -= mean[:, np.newaxis, np.newaxis]
             w = _normalize(w, m, M)
             waveforms_b.data = w
+            waveforms_b.cluster_id = cluster_id
         else:
             waveforms_b = None
         # Find the templates corresponding to the cluster.
@@ -489,13 +507,11 @@ class TemplateController(Controller):
         mean_amp = self.all_amplitudes[spike_ids].mean()
         tmp = templates * mean_amp
         tmp = _normalize(tmp, m, M)
-        n = len(template_ids)
-        template_b = Bunch(spike_ids=template_ids,
-                           spike_clusters=cluster_id * np.ones(n),
-                           data=tmp,
+        template_b = Bunch(data=tmp,
                            masks=masks,
                            alpha=1.,
                            mask_threshold=0.,
+                           cluster_id=cluster_id,
                            )
         if waveforms_b is not None:
             return [waveforms_b, template_b]
