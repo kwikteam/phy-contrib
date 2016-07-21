@@ -1,6 +1,6 @@
 # Manual Clustering Practical User's Guide
 
-The `phy-contrib.template-gui` module provides a graphical user interface for manual clustering after spike sorting using [KiloSort](https://github.com/cortex-lab/KiloSort).
+The `phy-contrib.template-gui` module provides a graphical user interface for manual clustering of automatically sorted spikes.
 
 Documentation contributed by Stephen Lenzi (Margrie Lab)
 _______________
@@ -9,19 +9,23 @@ _______________
 ### Requirements
 #### Hardware
 
-* An NVIDIA graphics card with at least 2GB of memory ([KiloSort](https://github.com/cortex-lab/KiloSort))
-* A decent amount of system memory is advisable (16GB minimum?) ([KiloSort](https://github.com/cortex-lab/KiloSort))
+* A decent amount of system memory is advisable (32GB)
+* SSD is recommended
 
 #### Software
 
-Please follow these links for installation guides for [Phy](https://github.com/kwikteam/phy) and [KiloSort](https://github.com/cortex-lab/KiloSort)
+* Install [Phy](https://github.com/kwikteam/phy) 
 
 <a name="test-datasets"></a>  
 #### Datasets
 
-* raw data binaries ([test dataset](https://github.com/kwikteam/test_dataset_raw))
-* metadata [params.py](https://github.com/phycontrib/params.py)
-* spike sorting output files (i.e. run Kilosort on the raw data or download the [sorted spikes data](https://github.com/phycontrib/output_files)
+* You must start with some automatically sorted data (e.g. by using [KiloSort](https://github.com/cortex-lab/KiloSort) on your data).
+
+* To get started, you can also use our test datasets:  
+
+   * raw data binaries ([test dataset](https://github.com/kwikteam/test_dataset_raw))
+   * metadata [params.py](https://github.com/phycontrib/params.py)
+   * spike sorting output files (i.e. run Kilosort on the raw data or download the [sorted spikes data](https://github.com/phycontrib/output_files)
 
 ## Running the Template-GUI
 
@@ -107,7 +111,7 @@ Additional clusters can be selected by holding Ctrl and selecting additional clu
 ### CorrelogramView
 ___________________
 
-CorrelogramView displays the pairwise auto-correlogram of each pair of (traces?) for each cluster selected. These are plotted in the same colour as the selected clusters. Cross correlograms for each pair of clusters are displayed in white. 
+CorrelogramView displays the auto-correlograms of each cluster's spike trains in color (on the diagonal) and the cross-correlograms of each pair of spike trains from the selected clusters in white (on the off-diagonal).
 
 By default the correlogram will show a window of 50ms and use a bin size of 1ms. These can both be adjusted using the `CorrelogramView` dropdown menu.
 
@@ -115,15 +119,17 @@ By default the correlogram will show a window of 50ms and use a bin size of 1ms.
 ### WaveformView
 ________________
 
-WaveformView displays every event in a cluster, displayed across all channels. Pressing the `W` key toggles between the individual traces and the average trace. If these are different between clusters it is very unlikely that they belong to the same cell. However, the converse is not true: similarity of waveforms is not sufficient in deciding if the two clusters arise from the same cell. If there are clearly two distinct groups of waveforms on the same channel (give an example image), then it is possible that the cluster contains the events from several cells and should be considered for cluster splitting.
+WaveformView plots a subset of the events of a cluster, displayed across all channels. Pressing the `W` key toggles between the individual traces and the average trace. If these are different between clusters it is very unlikely that they belong to the same cell. However, the converse is not true: similarity of waveforms is not sufficient in deciding if the two clusters arise from the same cell. If there are clearly two distinct groups of waveforms on the same channel, then it is possible that the cluster contains the events from several cells and should be considered for cluster splitting.
 
-Not all waveforms are highlighted in the cluster colour. The colour intensity is an indication of the 'best channel' for detecting the given event. For well-isolated cells this should be a subset of neighbouring channels. Noise will show up as having a very wide range of highlighted channels.
+Not all waveforms are highlighted in the cluster colour. The colour intensity is an indication of the 'best channel' for detecting the given event. For well-isolated cells this is likely to be a subset of neighbouring channels. Some types of noise artefact may show up as having a very wide range of highlighted channels.
 
 <a name="AmplitudeView"></a>  
 ### AmplitudeView
 _________________
 
-AmplitudeView displays the peak amplitude of individual events against time. This can indicate electrode drifting, which would result in a consistent decrease or increase in amplitude with respect to time.
+AmplitudeView displays the scaling of the template for each spike against time. This can indicate electrode drift, which would result in a consistent decrease or increase in amplitude/scaling with respect to time. 
+
+> NOTE:  Template scale factor is template-dependent so the points plotted are not necessarily comparable across templates.
 
 <a name="FeatureTemplateView"></a>  
 ### FeatureTemplateView
@@ -132,14 +138,13 @@ _______________________
 ### FeatureView
 _______________
 
-  
-FeatureView shows the principle components used in automated clustering for the [best channel](#best-channel). Other channels can be viewed with `Ctrl + click` on the waveform in [WaveformView](#WaveformView).
+FeatureView computes and displays principle component features for the [best channel](#best-channel) to aid the user in deciding whether events arise from the same or different clusters. The grid is arranged as follows:
 
-**Feature 1**: The first component is displayed in upper-most left plot in FeatureView. This feature relates to the scaling of each waveform, and thus gives some indication of the amplitudes of a cluster (in addition to AmplitudeView which shows the raw amplitudes).
+![cluster features](screenshots/cluster_features.png)
 
-**Feature 2**
+There are four features you can see (channel0 pc0 and 1, channel1 pc0 and 1). Each of these is has its own row and column to give you all combinations. The main diagonal is special, with time always on the x-axis.
 
-**Feature 3**
+Channel0 can be selected or changed using `ctrl + left click` on WaveformView, Channel1 can be selected or changed using `ctrl + right click`.
 
 <a name="user-guide"></a>  
 ## A typical approach to manual clustering
@@ -150,11 +155,13 @@ FeatureView shows the principle components used in automated clustering for the 
 2) there is a clear refractory period in the [CCG](#CCG) ([step 3](#step3))  
 3) potential merges and splits have been considered ([steps 2-4](#steps2-4))  
 4) then select 'move best to good' from the clustering drop down (or use the shortcut Alt + G). If you are unsure, or if any of these distinctions fail, then select 'move best to MUA', and if it is most likely noise 'move best to noise'. ([step 5](#step5))  
-5) Once you are satisfied with your cluster classifications, select save from the [ClusterView](#ClusterView) drop down menu. This will create a .csv file containing a list of cluster ids and their corresponding groups (good, MUA, noise). This file is saved to the current directory ([step 6](#step6)).  
+5) Once you are satisfied with your cluster classifications, select save from the [ClusterView](#ClusterView) drop down menu. This will create a .csv file containing a list of cluster ids and their corresponding groups (good, MUA, noise). Saving will also make spike_clusters.npy, a file containing the cluster identities of each spike. These files are saved to the current directory ([step 6](#step6)).  
 
 ### Detailed guide
  
 #### Step 1 - select a cluster from ClusterView
+
+
 ```
 Is the amplitude very low?
 Is the waveform shape noise-like?
@@ -163,12 +170,15 @@ Does the ACG reveal no evidence of a refractory period?
 * If YES: label as MUA or noise, select next cluster
 * If NO: select the most [similar](#similarity) cluster to compare, move to next step.
 
+> Hint: hit the spacebar to rapidly select the most similar cluster
+
 #### Step 2 - waveform similarity 
+
 ```
 Are the waveforms clearly distinct or do the clusters occupy a clearly different set of channels?
 ```
 
-* If YES: these clusters are non-overlapping, select the next most similar cluster in [SimilarityView](#SimilarityView) and repeat step 2
+* If YES: these clusters are non-overlapping, select the next most similar cluster (hit the `spacebar` again) in [SimilarityView](#SimilarityView) and repeat step 2
 * If NO (i.e. the waveforms are very similar): move to step 3
 
 #### Step 3 -  assess cross correlograms
@@ -176,8 +186,10 @@ Are the waveforms clearly distinct or do the clusters occupy a clearly different
 In the ACG/CCGs, is there evidence that both neurons have good refractory periods, but the CCG shows no refractory period? 
 ```
 
-* Consider [CorrelogramView](#CorrelogramView). If the ACGs for each cluster are dissimilar and there is no refractory period visible in the CCG, they are not the same neuron; move on to next most similar
-* If the ACGs are similar and the CCG looks the same as both ACGs, then consider steps 4-6:
+* Consider [CorrelogramView](#CorrelogramView). If the [ACGs](#ACG) for each cluster are dissimilar and there is no refractory period visible in the [CCG](#CCG), they are not the same neuron; move on to next most similar (hit `Spacebar` or select manually `Ctrl + click`)
+* If the [ACGs](#ACG) are similar and the [CCG](#CCG) looks the same as both [ACGs](#ACG), then consider steps 4-6:
+
+> NOTE: if the number of events in a cluster is low, then the CCGs/ACGs are not reliable. If they are noisy, or have very few events per bin, then they do not tell the user much either way regarding potential merges and splits.
 
 #### Step 4 consider FeatureView and AmplitudeView
 
@@ -243,7 +255,7 @@ For many applications, clusters with very few APs can be ignored (below 20). The
 <a name="merging"></a>
 `Merging`: If you decide that multiple clusters are very likely to originate from the same cell, you should merge them into a single cluster by pressing the `G` key. This will merge all currently selected clusters. This will result in a new `cluster_id` and will remove the old ones. 
 
-`Splitting`: If the cluster has two clearly distinct groups of waveforms in the same channel then you should consider splitting the cluster into two groups. Try looking at the FeatureView. If you think the cluster may be made of two distinct groups encircle one of the groups using ```Ctrl + click``` on the FeatureView. Once happy with the selection press `K`. Ideally this will successfully separate the two waveforms into two separate clusters.
+`Splitting`: If the cluster has two clearly distinct groups of waveforms in the same channel then you should consider splitting the cluster into two groups. Try looking at the FeatureView. If you think the cluster may be made of two distinct groups encircle one of the groups by holding down   `Ctrl` and `left click` around the group you would like to isolate. Each click creates a corner of a polygon selection. Once happy with the selection press `K`. Ideally this will successfully separate the two waveforms into two separate clusters. `Ctrl + right click` will undo your selection.
 
 Assessing `stability`: stability can be inferred using the AmplitudeView and/or the first feature component that is displayed in the top left panel of the FeatureView. This component relates to the scaling of the templates, which should be fairly consistent over the whole recording time. If there is drift away from the neuron, then one would expect the waveforms to decrease.
 
@@ -256,7 +268,7 @@ Assessing `refractory period`: provided that `n_spikes` is large enough, and tha
 ### Merging and splitting
 Merge: `G`
 Split: `K`
-Select for splitting: `Ctrl + left mouse click` (on FeatureView)
+Select for splitting: Hold `Ctrl` and use the `left mouse click` (on FeatureView) to define each point of your desired polygon. Define a region around the events you want to separate and press `K` to split when you are satisfied with your selection. `Ctrl + right mouse click` will undo your selection. 
 
 ### Classifying clusters
 Classify selected cluster(s) as 'good': `Alt + G`  
@@ -278,3 +290,4 @@ Decrease scaling: `Alt + down`
 ### Misc
 
 Undo: `Ctrl + Z`
+Select most similar/next most similar cluster: `spacebar` 
