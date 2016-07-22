@@ -196,9 +196,10 @@ class TemplateController(Controller):
                                     )
             n_samples_t, _ = traces.shape
             assert _ == self.n_channels_dat
-        elif self.dat_path is not None:
-            logger.warning("Error while loading data: File %s not found.",
-                           self.dat_path)
+        else:
+            if self.dat_path is not None:
+                logger.warning("Error while loading data: File %s not found.",
+                               self.dat_path)
             traces = None
             n_samples_t = 0
 
