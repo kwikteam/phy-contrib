@@ -197,6 +197,8 @@ class TemplateController(Controller):
             n_samples_t, _ = traces.shape
             assert _ == self.n_channels_dat
         else:
+            logger.warning("Error while loading dat: File %s does not exists.",
+                           self.dat_path)
             traces = None
             n_samples_t = 0
 
