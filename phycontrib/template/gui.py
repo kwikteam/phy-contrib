@@ -496,7 +496,6 @@ class TemplateController(Controller):
                                             self.all_waveforms,
                                             self.n_spikes_waveforms,
                                             )
-            # waveforms_b.mask_threshold = self.waveform_mask_threshold
             w = waveforms_b.data
             # Sparsify.
             channels = np.nonzero(w.mean(axis=1).mean(axis=0))[0]
@@ -516,19 +515,19 @@ class TemplateController(Controller):
         # Templates.
         templates = self.templates_unw[template_ids]
         assert templates.ndim == 3
-        masks = self.template_masks[template_ids]
-        assert masks.ndim == 2
-        assert templates.shape[0] == masks.shape[0]
+        # masks = self.template_masks[template_ids]
+        # assert masks.ndim == 2
+        # assert templates.shape[0] == masks.shape[0]
         # Find mean amplitude.
         spike_ids = self._select_spikes(cluster_id,
                                         self.n_spikes_waveforms_lim)
         mean_amp = self.all_amplitudes[spike_ids].mean()
         tmp = templates * mean_amp
         tmp = _normalize(tmp, m, M)
+        masks = np.ones((tmp.shape[0], self.n_channels))
         template_b = Bunch(data=tmp,
                            masks=masks,
                            alpha=1.,
-                           mask_threshold=0.,
                            cluster_id=cluster_id,
                            )
         if waveforms_b is not None:
