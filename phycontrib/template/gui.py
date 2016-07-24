@@ -144,25 +144,39 @@ def write_array(name, arr):
     np.save(name, arr)
 
 
-def get_masks(templates, channel_noise):
+def get_closest_channels(channel_positions, n):
+    """Return a (n_channels, n) array with the closest channels to
+    each channel.
+    """
+    x = channel_positions[:, 0]
+    y = channel_positions[:, 1]
+    dx = x[:, np.newaxis] - x[np.newaxis, :]
+    dy = y[:, np.newaxis] - y[np.newaxis, :]
+    d = dx ** 2 + dy ** 2
+    return np.argsort(d, axis=1)[:, :n]
+
+
+def get_masks(templates, closest_channels):
+    # TODO: precompute channels to each channel
     n_templates, n_samples_templates, n_channels = templates.shape
-    assert channel_noise.shape == (n_channels,)
     # Template max.
     amp = templates.max(axis=1)  # (n_templates, n_channels)
     # Template min.
     mi = templates.min(axis=1)  # (n_templates, n_channels)
     # Template amplitudes across all channels.
     amp -= mi  # (n_templates, n_channels)
-    # Divide by the channel noise.
-    amp /= channel_noise[np.newaxis, :]
-    # Clip between 0 and 1.
-    amp[...] = np.clip(amp, 0, 1)
     # The best channel for each template.
-    best = np.argmax(amp, axis=1)
-    # Make sure that there is at least one channel mask=1 for each template.
-    amp[np.arange(n_templates), best] = 1
-    assert amp.shape == (n_templates, n_channels)
-    return amp
+    best = np.argmax(amp, axis=1)  # (n_templates,)
+    # Create the masks array.
+    masks = np.zeros((n_templates, n_channels))
+    assert closest_channels.shape[0] == n_channels
+    n = closest_channels.shape[1]
+    # For each template, the closest channels.
+    ch = closest_channels[best, :]  # (n_templates, n)
+    x = np.arange(n_templates)
+    x = np.tile(x[:, np.newaxis], (1, n))
+    masks[x, ch] = 1
+    return masks
 
 
 class MaskLoader(object):
@@ -373,8 +387,12 @@ class TemplateController(Controller):
         else:
             filter_order = None
 
-        self.channel_noise = self.get_channel_noise()
-        self.template_masks = get_masks(self.templates, self.channel_noise)
+        # self.channel_noise = self.get_channel_noise()
+        n_closest_channels = 16  # TODO: customizable parameter
+        self.closest_channels = get_closest_channels(self.channel_positions,
+                                                     n_closest_channels,
+                                                     )
+        self.template_masks = get_masks(self.templates, self.closest_channels)
         self.all_masks = MaskLoader(self.template_masks, self.spike_templates)
 
         # Fetch waveforms from traces.
@@ -429,7 +447,7 @@ class TemplateController(Controller):
         template_id = np.argmax(nt)
         # Find the masked template waveform amplitude.
         mw = self.templates[[template_id]]
-        mm = get_masks(mw, self.channel_noise)
+        mm = self.template_masks[[template_id]]
         mw = mw[0, ...]
         mm = mm[0, ...]
         assert mw.ndim == 2
