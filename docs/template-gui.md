@@ -219,7 +219,7 @@ Select most similar/next most similar cluster: `spacebar`
 
 Snippets are commands you can enter quickly from the keyboard to perform certain actions. Start each snippet by typing a `:`. E.g. if you type exactly these characters:
 
-  `:c 321`
+  `:c 321[Enter]`
 
 Then cluster 321 will be selected. 
 * Available snippets:
