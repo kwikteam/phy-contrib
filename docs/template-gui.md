@@ -26,7 +26,24 @@ _______________
    * raw data binaries ([test dataset](https://github.com/kwikteam/test_dataset_raw))
    * metadata [params.py](https://github.com/phycontrib/params.py)
    * spike sorting output files (i.e. run Kilosort on the raw data or download the [sorted spikes data](https://github.com/phycontrib/output_files)
-
+   
+* Required files in the dataset:
+  * params.py - text file that specifies: 
+    * dat_path - location of raw data file
+    * n_channels_dat - total number of rows in the data file
+    * dtype - data type to read, e.g. 'int16'
+    * offset - number of bytes at the beginning of the file to skip
+    * sample_rate - in Hz
+    * hp_filtered - True/False, whether the data have already been filtered
+  * amplitudes.npy - [nSpikes, ] double vector with the amplitude scaling factor that was applied to the template when extracting that spike
+  * channel_map.npy - [nChannels, ] int32 vector with the channel map, i.e. which row of the data file to look in for the channel in question
+  * channel_positions.npy - [nChannels, 2] double matrix with each row giving the x and y coordinates of that channel. Together with the channel map, this determines how waveforms will be plotted in WaveformView (see below). 
+  * pc_features.npy - [nSpikes, nFeaturesPerChannel, nPCFeatures] single matrix giving the PC values for each spike. The channels that those features came from are specified in pc_features_ind.npy. E.g. the value at pc_features[123, 1, 5] is the projection of the 123rd spike onto the 1st PC on the channel given by pc_feature_ind[5]. 
+  * pc_feature_ind.npy - [nTemplates, nPCFeatures] uint32 matrix specifying which pcFeatures are included in the pc_features matrix. 
+  * similar_templates.npy - [nTemplates, nTemplates] single matrix giving the similarity score (larger is more similar) between each pair of templates
+  * spike_templates.npy - [nSpikes, ] uint32 vector specifying the identity of the template that was used to extract each spike
+  * spike_times.npy - [nSpikes, ] uint64 vector giving the spike time of each spike in *samples*. To convert to seconds, divide by sample_rate from params.py. 
+  
 ## Running the Template-GUI
 
 ### From the command line:
