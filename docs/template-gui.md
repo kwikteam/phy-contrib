@@ -6,12 +6,12 @@ Documentation contributed by Stephen Lenzi (Margrie Lab) and Nick Steinmetz
 
 ## Contents:
 * [Installation and requirements](#installation)
-* Running the GUI
-* What is shown in the GUI
-* Keyboard commands
-* A practical guide to a typical approach to manual clustering
-* FAQ
-* Glossary
+* [Running the GUI](#running-gui)
+* [What is shown in the GUI](#gui-views)
+* [Keyboard commands](#keyboard-shortcuts)
+* [A practical guide to a typical approach to manual clustering](#user-guide)
+* [FAQ](#FAQ)
+* [Glossary](#glossary)
 
 
 _______________
@@ -65,6 +65,7 @@ _______________
   * `spike_clusters.npy` - `[nSpikes, ] int32` vector giving the cluster identity of each spike. This file is optional and if not provided will be automatically created the first time you run the template gui, taking the same values as spike_templates.npy until you do any merging or splitting. 
   * `cluster_groups.csv` - comma-separated value text file giving the "cluster group" of each cluster (0=noise, 1=MUA, 2=Good, 3=unsorted)
   
+<a name="running-gui"></a>
 ## Running the Template-GUI
 
 ### From the command line:
@@ -94,6 +95,7 @@ $  phy template-gui params.py
 ### From Python
 <is it possible to run the template-gui directly in python?>
 
+<a name="gui-views"></a>
 ## The Template-GUI
 
 The Template-GUI consists of several interactive plotting windows called Views.  
@@ -319,6 +321,12 @@ The decision-making process will vary slightly depending on the experimental que
 
 For many applications, clusters with very few APs can be ignored (below 20). The error rate of Kilosort is very low (missed events ~1% <LINK>) and it is hard to know without good ACGs/CCGs to which cluster the events belong. The cutoff for this will vary between experiments.
 
+<a name="FAQ"></a>
+## FAQ
+* I opened the GUI but don't have a waveform view or trace view. What happened?
+  * These views won't show if the data file isn't found or can't be loaded. So check that your params.py has the correct path for the data file and that it is the correct file.
+
+<a name="glossary"></a>
 ## Glossary
 
 
