@@ -39,7 +39,8 @@ _______________
    * metadata [params.py](https://github.com/phycontrib/params.py)
    * spike sorting output files (i.e. run Kilosort on the raw data or download the [sorted spikes data](https://github.com/phycontrib/output_files)
    
-* Required files in the dataset:
+* Required files in the dataset.
+  * _First a note about many of these files:_ Many of the files are `.npy` format which is a simple file format that can be natively read in python and read in matlab via the [npy-matlab repository](https://github.com/kwikteam/npy-matlab).   
   * A raw data file, with any filename. This file should be "flat binary" format, meaning that the data values corresponding to the voltage traces can are just the literal bytes in the file with no additional formatting (header data is allowed at the beginning of the file, but will not be used)
   * `params.py` - text file that specifies: 
     * `dat_path` - location of raw data file
