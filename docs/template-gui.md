@@ -28,9 +28,10 @@ _______________
    * spike sorting output files (i.e. run Kilosort on the raw data or download the [sorted spikes data](https://github.com/phycontrib/output_files)
    
 * Required files in the dataset:
+  * A raw data file, with any filename. This file should be "flat binary" format, meaning that the data values corresponding to the voltage traces can are just the literal bytes in the file with no additional formatting (header data is allowed at the beginning of the file, but will not be used)
   * params.py - text file that specifies: 
     * dat_path - location of raw data file
-    * n_channels_dat - total number of rows in the data file
+    * n_channels_dat - _total_ number of rows in the data file (not just those that have your neural data on them. This is for loading the file)
     * dtype - data type to read, e.g. 'int16'
     * offset - number of bytes at the beginning of the file to skip
     * sample_rate - in Hz
@@ -42,7 +43,15 @@ _______________
   * pc_feature_ind.npy - [nTemplates, nPCFeatures] uint32 matrix specifying which pcFeatures are included in the pc_features matrix. 
   * similar_templates.npy - [nTemplates, nTemplates] single matrix giving the similarity score (larger is more similar) between each pair of templates
   * spike_templates.npy - [nSpikes, ] uint32 vector specifying the identity of the template that was used to extract each spike
-  * spike_times.npy - [nSpikes, ] uint64 vector giving the spike time of each spike in *samples*. To convert to seconds, divide by sample_rate from params.py. 
+  * spike_times.npy - [nSpikes, ] uint64 vector giving the spike time of each spike in **samples**. To convert to seconds, divide by sample_rate from params.py. 
+  * template_features.npy - [nSpikes, nTempFeatures] single matrix giving the magnitude of the projection of each spike onto nTempFeatures other features. Which other features is specified in template_feature_ind.npy
+  * template_feature_ind.npy - [nTemplates, nTempFeatures] uint32 matrix specifying which templateFeatures are included in the template_features matrix. 
+  * templates.npy - [nTemplates, nTimePoints, nTempChannels] single matrix giving the template shapes on the channels given in templates_ind.npy
+  * templates_ind.npy - [nTemplates, nTempChannels] double matrix specifying the channels on which each template is defined. In the case of Kilosort templates_ind is just the integers from 0 to nChannels-1, since templates are defined on all channels. 
+  * whitening_mat.npy - [nChannels, nChannels] double whitening matrix applied to the data during automatic spike sorting
+  * whitening_mat_inv.npy - [nChannels, nChannels] double, the inverse of the whitening matrix. 
+  * spike_clusters.npy - [nSpikes, ] int32 vector giving the cluster identity of each spike. This file is optional and if not provided will be automatically created the first time you run the template gui, taking the same values as spike_templates.npy until you do any merging or splitting. 
+  * cluster_groups.csv - comma-separated value text file giving the "cluster group" of each cluster (0=noise, 1=MUA, 2=Good, 3=unsorted)
   
 ## Running the Template-GUI
 
