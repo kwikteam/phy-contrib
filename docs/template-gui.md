@@ -2,8 +2,20 @@
 
 The `phy-contrib.template-gui` module provides a graphical user interface for manual clustering of automatically sorted spikes.
 
-Documentation contributed by Stephen Lenzi (Margrie Lab)
+Documentation contributed by Stephen Lenzi (Margrie Lab) and Nick Steinmetz
+
+## Contents:
+* [Installation and requirements](#installation)
+* Running the GUI
+* What is shown in the GUI
+* Keyboard commands
+* A practical guide to a typical approach to manual clustering
+* FAQ
+* Glossary
+
+
 _______________
+<a name='installation'></a>
 ## Installation
 
 ### Requirements
