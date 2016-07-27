@@ -358,7 +358,7 @@ class TemplateController(Controller):
 
         # Amplitudes
         self.all_amplitudes = amplitudes
-        self.amplitudes_lim = 2. * np.median(self.all_amplitudes)
+        self.amplitudes_lim = np.max(self.all_amplitudes)
 
         # Templates
         self.templates = templates
@@ -577,7 +577,8 @@ class TemplateController(Controller):
         d.spike_ids = spike_ids
         d.x = self.spike_times[spike_ids]
         d.y = self.all_amplitudes[spike_ids]
-        d.data_bounds = [0, 0, self.duration, self.amplitudes_lim]
+        M = d.y.max()
+        d.data_bounds = [0, 0, self.duration, M]
         return d
 
     def _get_template_features(self, spike_ids):
