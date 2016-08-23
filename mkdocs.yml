@@ -1,0 +1,5 @@
+site_name: phy-contrib
+pages:
+- Home: 'index.md'
+- TemplateGUI: 'template-gui.md'
+theme: readthedocs
