@@ -73,7 +73,9 @@ class KwikController(Controller):
         self.all_masks = m.all_masks
         self.all_waveforms = m.all_waveforms
         self.all_features = m.all_features
-        self.all_traces = m.all_traces
+        # WARNING: m.all_traces contains the dead channels, m.traces doesn't.
+        # Also, m.traces has the reordered channels as per the prb file.
+        self.all_traces = m.traces
 
     def create_gui(self, config_dir=None):
         """Create the kwik GUI."""
