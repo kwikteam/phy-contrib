@@ -8,3 +8,4 @@
 #------------------------------------------------------------------------------
 
 from .precache import PrecachePlugin  # noqa
+from .saveprompt import SavePromptPlugin  # noqa
