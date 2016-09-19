@@ -667,6 +667,17 @@ class TemplateController(Controller):
         def on_close():
             self.context.save_memcache()
 
+        # Add split on templates action.
+        mc = self.manual_clustering
+
+        @mc.actions.add(shortcut='shift+ctrl+k')
+        def split_init(cluster_ids=None):
+            """Split a cluster according to the original templates."""
+            if cluster_ids is None:
+                cluster_ids = mc.selected
+            spike_ids = mc.clustering.spikes_in_clusters(cluster_ids)
+            mc.split(spike_ids, self.spike_templates[spike_ids])
+
         return gui
 
 
