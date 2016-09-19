@@ -444,6 +444,8 @@ class TemplateController(Controller):
     def get_waveform_lims(self):
         n_spikes = self.n_spikes_waveforms_lim
         arr = self.all_waveforms
+        if arr is None:
+            return 0., 1.
         n = arr.shape[0]
         k = max(1, n // n_spikes)
         # Extract waveforms.
@@ -644,6 +646,10 @@ class TemplateController(Controller):
             self.add_amplitude_view(gui)
         if self.template_features is not None:
             self.add_feature_template_view(gui)
+
+        # Add the waveform view even if there is no raw data.
+        if self.all_waveforms is None:
+            self.add_waveform_view(gui)
 
         # Save.
         @gui.connect_
