@@ -508,6 +508,7 @@ class TemplateController(Controller):
             w = _normalize(w, m, M)
             waveforms_b.data = w
             waveforms_b.cluster_id = cluster_id
+            waveforms_b.tag = 'waveforms'
         else:
             waveforms_b = None
         # Find the templates corresponding to the cluster.
@@ -515,20 +516,25 @@ class TemplateController(Controller):
         # Templates.
         templates = self.templates_unw[template_ids]
         assert templates.ndim == 3
-        # masks = self.template_masks[template_ids]
-        # assert masks.ndim == 2
-        # assert templates.shape[0] == masks.shape[0]
+        # Masks.
+        masks = self.template_masks[template_ids]
+        assert masks.ndim == 2
+        assert templates.shape[0] == masks.shape[0]
         # Find mean amplitude.
         spike_ids = self._select_spikes(cluster_id,
                                         self.n_spikes_waveforms_lim)
         mean_amp = self.all_amplitudes[spike_ids].mean()
-        tmp = templates * mean_amp
-        tmp = _normalize(tmp, m, M)
-        masks = np.ones((tmp.shape[0], self.n_channels))
-        template_b = Bunch(data=tmp,
+        # Normalize.
+        # mean = templates.mean(axis=1).mean(axis=1)
+        templates = templates.astype(np.float64).copy()
+        # templates -= mean[:, np.newaxis, np.newaxis]
+        templates *= mean_amp
+        templates *= 2. / (M - m)
+        template_b = Bunch(data=templates,
                            masks=masks,
                            alpha=1.,
                            cluster_id=cluster_id,
+                           tag='templates',
                            )
         if waveforms_b is not None:
             return [waveforms_b, template_b]
@@ -703,6 +709,17 @@ class TemplateController(Controller):
         @gui.connect_
         def on_close():
             self.context.save_memcache()
+
+        mc = self.manual_clustering
+
+        @mc.actions.add(shortcut='w')
+        def toggle_waveforms():
+            """Show or hide the waveforms in the waveform view."""
+            wv = gui.get_view('WaveformView')
+            if not wv.filtered_tags:
+                wv.filter_by_tag('templates')
+            else:
+                wv.filter_by_tag()
 
         return gui
 
