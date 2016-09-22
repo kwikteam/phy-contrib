@@ -688,6 +688,17 @@ class TemplateController(Controller):
         if self.all_waveforms is None:
             self.add_waveform_view(gui)
 
+        # Add the option to show/hide waveforms.
+        waveform_view = gui.get_view('WaveformView', is_visible=False)
+        if waveform_view:
+            @waveform_view.actions.add(shortcut='w')
+            def toggle_waveforms():
+                """Show or hide the waveforms in the waveform view."""
+                if not waveform_view.filtered_tags:
+                    waveform_view.filter_by_tag('templates')
+                else:
+                    waveform_view.filter_by_tag()
+
         # Save.
         @gui.connect_
         def on_request_save(spike_clusters, groups):
@@ -709,17 +720,6 @@ class TemplateController(Controller):
         @gui.connect_
         def on_close():
             self.context.save_memcache()
-
-        mc = self.manual_clustering
-
-        @mc.actions.add(shortcut='w')
-        def toggle_waveforms():
-            """Show or hide the waveforms in the waveform view."""
-            wv = gui.get_view('WaveformView')
-            if not wv.filtered_tags:
-                wv.filter_by_tag('templates')
-            else:
-                wv.filter_by_tag()
 
         return gui
 
