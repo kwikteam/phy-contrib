@@ -144,7 +144,7 @@ def write_array(name, arr):
     np.save(name, arr)
 
 
-def get_closest_channels(channel_positions, n):
+def get_closest_channels(channel_positions, n=None):
     """Return a (n_channels, n) array with the closest channels to
     each channel.
     """
@@ -153,7 +153,10 @@ def get_closest_channels(channel_positions, n):
     dx = x[:, np.newaxis] - x[np.newaxis, :]
     dy = y[:, np.newaxis] - y[np.newaxis, :]
     d = dx ** 2 + dy ** 2
-    return np.argsort(d, axis=1)[:, :n]
+    out = np.argsort(d, axis=1)
+    if n:
+        out = out[:, :n]
+    return out
 
 
 def get_masks(templates, closest_channels):
@@ -387,8 +390,8 @@ class TemplateController(Controller):
         else:
             filter_order = None
 
-        # self.channel_noise = self.get_channel_noise()
-        n_closest_channels = 16  # TODO: customizable parameter
+        n_closest_channels = getattr(self, 'max_n_unmasked_channels', 16)
+        mask_threshold = getattr(self, 'waveform_mask_threshold', None)
         self.closest_channels = get_closest_channels(self.channel_positions,
                                                      n_closest_channels,
                                                      )
@@ -404,7 +407,7 @@ class TemplateController(Controller):
                                        n_samples_waveforms=nsw,
                                        filter_order=filter_order,
                                        sample_rate=self.sample_rate,
-                                       mask_threshold=self.waveform_mask_threshold,  # noqa
+                                       mask_threshold=mask_threshold,
                                        )
         else:
             waveforms = None
