@@ -23,12 +23,13 @@ from phy.gui import create_app, run_app  # noqa
 from phy.io.array import (concat_per_cluster,
                           _concatenate_virtual_arrays,
                           _index_of,
+                          _unique,
+                          get_excerpts,
                           )
 from phy.plot.transform import _normalize
 from phy.utils.cli import _run_cmd
 from phy.stats.clusters import get_waveform_amplitude
-from phy.traces import SpikeLoader, WaveformLoader
-from phy.traces.filter import apply_filter, bandpass_filter
+from phy.traces import WaveformLoader
 from phy.utils import Bunch, IPlugin
 from phy.utils._misc import _read_python
 
@@ -74,14 +75,14 @@ def subtract_templates(traces,
                        ):
     traces = traces.copy()
     st = spike_times
-    w = spike_templates * amplitudes[:, np.newaxis, np.newaxis]
+    w = spike_templates
     n_spikes, n_samples_t, n_channels = w.shape
     n = traces.shape[0]
     for index in range(w.shape[0]):
         t = int(round((st[index] - start) * sample_rate))
         i, j = n_samples_t // 2, n_samples_t // 2 + (n_samples_t % 2)
         assert i + j == n_samples_t
-        x = w[index]  # (n_samples, n_channels)
+        x = w[index] * amplitudes[index]  # (n_samples, n_channels)
         sa, sb = t - i, t + j
         if sa < 0:
             x = x[-sa:, :]
@@ -143,15 +144,41 @@ def write_array(name, arr):
     np.save(name, arr)
 
 
-def get_masks(templates):
+def get_closest_channels(channel_positions, n=None):
+    """Return a (n_channels, n) array with the closest channels to
+    each channel.
+    """
+    x = channel_positions[:, 0]
+    y = channel_positions[:, 1]
+    dx = x[:, np.newaxis] - x[np.newaxis, :]
+    dy = y[:, np.newaxis] - y[np.newaxis, :]
+    d = dx ** 2 + dy ** 2
+    out = np.argsort(d, axis=1)
+    if n:
+        out = out[:, :n]
+    return out
+
+
+def get_masks(templates, closest_channels):
+    # TODO: precompute channels to each channel
     n_templates, n_samples_templates, n_channels = templates.shape
-    templates = np.abs(templates)
-    m = templates.max(axis=1)  # (n_templates, n_channels)
-    mm = m.max(axis=1)  # (n_templates,
-    ind = mm == 0
-    mm[ind] = 1
-    masks = m / mm[:, np.newaxis]  # (n_templates, n_channels)
-    masks[ind, :] = 0
+    # Template max.
+    amp = templates.max(axis=1)  # (n_templates, n_channels)
+    # Template min.
+    mi = templates.min(axis=1)  # (n_templates, n_channels)
+    # Template amplitudes across all channels.
+    amp -= mi  # (n_templates, n_channels)
+    # The best channel for each template.
+    best = np.argmax(amp, axis=1)  # (n_templates,)
+    # Create the masks array.
+    masks = np.zeros((n_templates, n_channels))
+    assert closest_channels.shape[0] == n_channels
+    n = closest_channels.shape[1]
+    # For each template, the closest channels.
+    ch = closest_channels[best, :]  # (n_templates, n)
+    x = np.arange(n_templates)
+    x = np.tile(x[:, np.newaxis], (1, n))
+    masks[x, ch] = 1
     return masks
 
 
@@ -334,7 +361,7 @@ class TemplateController(Controller):
 
         # Amplitudes
         self.all_amplitudes = amplitudes
-        self.amplitudes_lim = self.all_amplitudes.max()
+        self.amplitudes_lim = np.max(self.all_amplitudes)
 
         # Templates
         self.templates = templates
@@ -349,45 +376,42 @@ class TemplateController(Controller):
         self.spike_times = spike_samples / float(self.sample_rate)
         assert np.all(np.diff(self.spike_times) >= 0)
 
-        self.cluster_ids = np.unique(self.spike_clusters)
+        self.cluster_ids = _unique(self.spike_clusters)
         # n_clusters = len(self.cluster_ids)
 
         self.channel_positions = channel_positions
         self.all_traces = traces
 
-        # Filter the waveforms.
-        order = 3
-        filter_margin = order * 3
-        b_filter = bandpass_filter(rate=self.sample_rate,
-                                   low=500.,
-                                   high=self.sample_rate * .475,
-                                   order=order)
-
         # Only filter the data for the waveforms if the traces
         # are not already filtered.
         if not getattr(self, 'hp_filtered', False):
             logger.debug("HP filtering the data for waveforms")
-
-            def the_filter(x, axis=0):
-                return apply_filter(x, b_filter, axis=axis)
+            filter_order = 3
         else:
-            the_filter = None
+            filter_order = None
+
+        n_closest_channels = getattr(self, 'max_n_unmasked_channels', 16)
+        mask_threshold = getattr(self, 'waveform_mask_threshold', None)
+        self.closest_channels = get_closest_channels(self.channel_positions,
+                                                     n_closest_channels,
+                                                     )
+        self.template_masks = get_masks(self.templates, self.closest_channels)
+        self.all_masks = MaskLoader(self.template_masks, self.spike_templates)
 
         # Fetch waveforms from traces.
         nsw = self.n_samples_waveforms
         if traces is not None:
             waveforms = WaveformLoader(traces=traces,
+                                       masks=self.all_masks,
+                                       spike_samples=spike_samples,
                                        n_samples_waveforms=nsw,
-                                       filter=the_filter,
-                                       filter_margin=filter_margin,
+                                       filter_order=filter_order,
+                                       sample_rate=self.sample_rate,
+                                       mask_threshold=mask_threshold,
                                        )
-            waveforms = SpikeLoader(waveforms, spike_samples)
         else:
             waveforms = None
         self.all_waveforms = waveforms
-
-        self.template_masks = get_masks(self.templates)
-        self.all_masks = MaskLoader(self.template_masks, self.spike_templates)
 
         # Read the cluster groups.
         logger.debug("Loading the cluster groups.")
@@ -411,6 +435,10 @@ class TemplateController(Controller):
         st = self.spike_templates[spike_ids]
         return np.bincount(st, minlength=self.n_templates)
 
+    def get_channel_noise(self):
+        ex = get_excerpts(self.all_traces, n_excerpts=100, excerpt_size=100)
+        return ex.std(axis=0)
+
     def get_background_features(self):
         # Disable for now
         pass
@@ -422,7 +450,7 @@ class TemplateController(Controller):
         template_id = np.argmax(nt)
         # Find the masked template waveform amplitude.
         mw = self.templates[[template_id]]
-        mm = get_masks(mw)
+        mm = self.template_masks[[template_id]]
         mw = mw[0, ...]
         mm = mm[0, ...]
         assert mw.ndim == 2
@@ -440,6 +468,8 @@ class TemplateController(Controller):
         self._cluster_template_similarities = ctx.memcache(
             self._cluster_template_similarities)
         self._sim_ij = ctx.memcache(self._sim_ij)
+
+        self.get_channel_noise = ctx.cache(self.get_channel_noise)
 
     def get_waveform_lims(self):
         n_spikes = self.n_spikes_waveforms_lim
@@ -469,10 +499,19 @@ class TemplateController(Controller):
                                             self.all_waveforms,
                                             self.n_spikes_waveforms,
                                             )
-            mean = waveforms_b.data.mean(axis=1).mean(axis=1)
-            waveforms_b.data = waveforms_b.data.astype(np.float64)
-            waveforms_b.data -= mean[:, np.newaxis, np.newaxis]
-            waveforms_b.data = _normalize(waveforms_b.data, m, M)
+            w = waveforms_b.data
+            # Sparsify.
+            channels = np.nonzero(w.mean(axis=1).mean(axis=0))[0]
+            w = w[:, :, channels]
+            waveforms_b.channels = channels
+            # Normalize.
+            mean = w.mean(axis=1).mean(axis=1)
+            w = w.astype(np.float64)
+            w -= mean[:, np.newaxis, np.newaxis]
+            w = _normalize(w, m, M)
+            waveforms_b.data = w
+            waveforms_b.cluster_id = cluster_id
+            waveforms_b.tag = 'waveforms'
         else:
             waveforms_b = None
         # Find the templates corresponding to the cluster.
@@ -480,6 +519,7 @@ class TemplateController(Controller):
         # Templates.
         templates = self.templates_unw[template_ids]
         assert templates.ndim == 3
+        # Masks.
         masks = self.template_masks[template_ids]
         assert masks.ndim == 2
         assert templates.shape[0] == masks.shape[0]
@@ -487,14 +527,17 @@ class TemplateController(Controller):
         spike_ids = self._select_spikes(cluster_id,
                                         self.n_spikes_waveforms_lim)
         mean_amp = self.all_amplitudes[spike_ids].mean()
-        tmp = templates * mean_amp
-        tmp = _normalize(tmp, m, M)
-        n = len(template_ids)
-        template_b = Bunch(spike_ids=template_ids,
-                           spike_clusters=cluster_id * np.ones(n),
-                           data=tmp,
+        # Normalize.
+        # mean = templates.mean(axis=1).mean(axis=1)
+        templates = templates.astype(np.float64).copy()
+        # templates -= mean[:, np.newaxis, np.newaxis]
+        templates *= mean_amp
+        templates *= 2. / (M - m)
+        template_b = Bunch(data=templates,
                            masks=masks,
                            alpha=1.,
+                           cluster_id=cluster_id,
+                           tag='templates',
                            )
         if waveforms_b is not None:
             return [waveforms_b, template_b]
@@ -541,9 +584,10 @@ class TemplateController(Controller):
         spike_ids = self._select_spikes(cluster_id, self.n_spikes_features)
         d = Bunch()
         d.spike_ids = spike_ids
-        d.spike_clusters = cluster_id * np.ones(len(spike_ids), dtype=np.int32)
         d.x = self.spike_times[spike_ids]
         d.y = self.all_amplitudes[spike_ids]
+        M = d.y.max()
+        d.data_bounds = [0, 0, self.duration, M]
         return d
 
     def _get_template_features(self, spike_ids):
@@ -561,19 +605,15 @@ class TemplateController(Controller):
         nj = self.get_cluster_templates(cj)
 
         ti = self._get_template_features(si)
-        x0 = np.sum(ti * ni[np.newaxis, :], axis=1) / ni.sum()
-        y0 = np.sum(ti * nj[np.newaxis, :], axis=1) / nj.sum()
+        x0 = np.average(ti, weights=ni, axis=1)
+        y0 = np.average(ti, weights=nj, axis=1)
 
         tj = self._get_template_features(sj)
-        x1 = np.sum(tj * ni[np.newaxis, :], axis=1) / ni.sum()
-        y1 = np.sum(tj * nj[np.newaxis, :], axis=1) / nj.sum()
+        x1 = np.average(tj, weights=ni, axis=1)
+        y1 = np.average(tj, weights=nj, axis=1)
 
-        d = Bunch()
-        d.x = np.hstack((x0, x1))
-        d.y = np.hstack((y0, y1))
-        d.spike_ids = np.hstack((si, sj))
-        d.spike_clusters = self.spike_clusters[d.spike_ids]
-        return d
+        return [Bunch(x=x0, y=y0, spike_ids=si),
+                Bunch(x=x1, y=y1, spike_ids=sj)]
 
     def get_cluster_features(self, cluster_ids):
         if len(cluster_ids) < 2:
@@ -651,6 +691,17 @@ class TemplateController(Controller):
         if self.all_waveforms is None:
             self.add_waveform_view(gui)
 
+        # Add the option to show/hide waveforms.
+        waveform_view = gui.get_view('WaveformView', is_visible=False)
+        if waveform_view:
+            @waveform_view.actions.add(shortcut='w')
+            def toggle_waveforms():
+                """Show or hide the waveforms in the waveform view."""
+                if not waveform_view.filtered_tags:
+                    waveform_view.filter_by_tag('templates')
+                else:
+                    waveform_view.filter_by_tag()
+
         # Save.
         @gui.connect_
         def on_request_save(spike_clusters, groups):
@@ -680,6 +731,15 @@ class TemplateController(Controller):
 # Template GUI plugin
 #------------------------------------------------------------------------------
 
+def _run(params):
+    controller = TemplateController(**params)
+    gui = controller.create_gui()
+    gui.show()
+    run_app()
+    gui.close()
+    del gui
+
+
 class TemplateGUIPlugin(IPlugin):
     """Create the `phy template-gui` command for Kwik files."""
 
@@ -691,18 +751,9 @@ class TemplateGUIPlugin(IPlugin):
         @click.pass_context
         def cluster_manual(ctx, params_path):
             """Launch the Template GUI on a params.py file."""
-            # Create the Qt application.
             create_app()
 
             params = _read_python(params_path)
             params['dtype'] = np.dtype(params['dtype'])
 
-            controller = TemplateController(**params)
-            gui = controller.create_gui()
-
-            gui.show()
-
-            _run_cmd('run_app()', ctx, globals(), locals())
-
-            gui.close()
-            del gui
+            _run_cmd('_run(params)', ctx, globals(), locals())
