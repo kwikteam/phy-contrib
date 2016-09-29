@@ -13,6 +13,7 @@ _old
 *~
 .coverage*
 *credentials
+tags
 
 # C extensions
 *.so
