@@ -31,6 +31,7 @@ from phy.utils.cli import _run_cmd
 from phy.stats.clusters import get_waveform_amplitude
 from phy.traces import WaveformLoader
 from phy.utils import Bunch, IPlugin
+from phy.utils.cli import _add_log_file
 from phy.utils._misc import _read_python
 
 logger = logging.getLogger(__name__)
@@ -762,6 +763,10 @@ class TemplateGUIPlugin(IPlugin):
         @click.pass_context
         def cluster_manual(ctx, params_path):
             """Launch the Template GUI on a params.py file."""
+
+            # Create a `phy.log` log file with DEBUG level.
+            _add_log_file(op.join(op.dirname(params_path), 'phy.log'))
+
             create_app()
 
             params = _read_python(params_path)

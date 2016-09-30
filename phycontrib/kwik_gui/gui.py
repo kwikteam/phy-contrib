@@ -16,7 +16,7 @@ import click
 from phy import IPlugin
 from phy.cluster.manual.controller import Controller
 from phy.gui import create_app, run_app
-from phy.utils.cli import _run_cmd
+from phy.utils.cli import _run_cmd, _add_log_file
 
 logger = logging.getLogger(__name__)
 
@@ -137,6 +137,10 @@ class KwikGUIPlugin(IPlugin):
         @click.pass_context
         def cluster_manual(ctx, path, channel_group=None, clustering=None):
             """Launch the Kwik GUI on a Kwik file."""
+
+            # Create a `phy.log` log file with DEBUG level.
+            _add_log_file(op.join(op.dirname(path), 'phy.log'))
+
             create_app()
             _run_cmd('_run(path, channel_group, clustering)',
                      ctx, globals(), locals())
