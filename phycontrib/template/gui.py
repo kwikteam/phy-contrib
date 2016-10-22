@@ -746,7 +746,7 @@ class TemplateController(Controller):
             save_metadata(filenames['cluster_groups'], 'group', groups)
             # Save other labels.
             for field_name, dic in labels:
-                save_metadata('%s.csv' % field_name, field_name, dic)
+                save_metadata('cluster_%s.csv' % field_name, field_name, dic)
 
         # Save the memcache when closing the GUI.
         @gui.connect_
