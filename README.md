@@ -32,3 +32,9 @@ Then, you can update at any time with:
 cd phy-contrib
 git pull
 ```
+
+## Documentation
+
+* [Main documentation](http://phy-contrib.readthedocs.io/en/latest/)
+* KwikGUI documentation (work in progress)
+* [TemplateGUI documentation](http://phy-contrib.readthedocs.io/en/latest/template-gui/)
