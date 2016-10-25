@@ -16,6 +16,7 @@ import click
 from phy import IPlugin
 from phy.cluster.manual.controller import Controller
 from phy.gui import create_app, run_app
+from phy.utils.tempdir import TemporaryDirectory
 from phy.utils.cli import _run_cmd, _add_log_file
 
 logger = logging.getLogger(__name__)
@@ -93,10 +94,14 @@ class KwikController(Controller):
             cluster_ids = self.manual_clustering.selected
             spike_ids = self.selector.select_spikes(cluster_ids)
             logger.info("Running KlustaKwik on %d spikes.", len(spike_ids))
-            spike_clusters, metadata = cluster(self.model,
-                                               spike_ids,
-                                               num_starting_clusters=10,
-                                               )
+
+            # Run KK2 in a temporary directory to avoid side effects.
+            with TemporaryDirectory() as tempdir:
+                spike_clusters, metadata = cluster(self.model,
+                                                   spike_ids,
+                                                   num_starting_clusters=10,
+                                                   tempdir=tempdir,
+                                                   )
             self.manual_clustering.split(spike_ids, spike_clusters)
 
         # Save.
