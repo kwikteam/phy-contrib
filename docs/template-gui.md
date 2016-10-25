@@ -242,6 +242,8 @@ Then cluster 321 will be selected.
   * `:cb X` - set correlogram bin size to X
   * `:cw X` - set correlogram window width to X
 
+All commands can be run as snippets. For example, `:move`, `:merge`, `:recluster`, and so on. The command name of every action is displayed in the status bar at the bottom of the window when you hover your mouse on any action in the menu bar. 
+
 <a name="user-guide"></a>  
 ## A typical approach to manual clustering
 
