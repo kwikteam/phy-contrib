@@ -3,8 +3,8 @@
 This plugin adds an interactive matplotlib figure showing the ISI of the
 first selected cluster.
 
-To activate the plugin, you need to add this line to your
-`~/.phy/phy_config.py`.
+To activate the plugin, copy this file to `~/.phy/plugins/` and add this line
+to your `~/.phy/phy_config.py`:
 
 ```python
 c.KwikGUI.plugins = ['CustomView']
