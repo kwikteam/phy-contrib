@@ -2,4 +2,5 @@ site_name: phy-contrib
 pages:
 - Home: 'index.md'
 - TemplateGUI: 'template-gui.md'
+- Examples: 'examples.md'
 theme: readthedocs
