@@ -66,6 +66,7 @@ class KwikController(Controller):
         self.cluster_ids = m.cluster_ids
 
         self.channel_positions = m.channel_positions
+        self.channel_order = m.channel_order
         self.n_samples_waveforms = m.n_samples_waveforms
         self.n_channels = m.n_channels
         self.n_features_per_channel = m.n_features_per_channel
