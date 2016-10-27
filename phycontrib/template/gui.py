@@ -295,6 +295,7 @@ class TemplateController(Controller):
         assert channel_mapping.shape == (n_channels,)
         # Ensure that the mappings maps to valid columns in the dat file.
         assert np.all(channel_mapping <= self.n_channels_dat - 1)
+        self.channel_order = channel_mapping
 
         logger.debug("Loading channel positions.")
         channel_positions = read_array('channel_positions')
