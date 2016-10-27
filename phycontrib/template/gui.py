@@ -10,6 +10,7 @@
 import csv
 import logging
 from operator import itemgetter
+import os
 import os.path as op
 import shutil
 
@@ -208,8 +209,10 @@ class TemplateController(Controller):
     gui_name = 'TemplateGUI'
 
     def __init__(self, dat_path=None, **kwargs):
-        path = op.realpath(op.expanduser(dat_path))
-        self.cache_dir = op.join(op.dirname(path), '.phy')
+        dat_path = dat_path or ''
+        dir_path = (op.dirname(op.realpath(op.expanduser(dat_path)))
+                    if dat_path else os.getcwd())
+        self.cache_dir = op.join(dir_path, '.phy')
         self.dat_path = dat_path
         self.__dict__.update(kwargs)
         super(TemplateController, self).__init__()
@@ -614,8 +617,15 @@ class TemplateController(Controller):
         x1 = np.average(tj, weights=ni, axis=1)
         y1 = np.average(tj, weights=nj, axis=1)
 
-        return [Bunch(x=x0, y=y0, spike_ids=si),
-                Bunch(x=x1, y=y1, spike_ids=sj)]
+        # Compute the data bounds.
+        x_min = min(x0.min(), x1.min())
+        y_min = min(y0.min(), y1.min())
+        x_max = max(x0.max(), x1.max())
+        y_max = max(y0.max(), y1.max())
+        data_bounds = (x_min, y_min, x_max, y_max)
+
+        return [Bunch(x=x0, y=y0, spike_ids=si, data_bounds=data_bounds),
+                Bunch(x=x1, y=y1, spike_ids=sj, data_bounds=data_bounds)]
 
     def get_cluster_features(self, cluster_ids):
         if len(cluster_ids) < 2:
