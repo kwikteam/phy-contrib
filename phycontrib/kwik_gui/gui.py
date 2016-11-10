@@ -47,9 +47,12 @@ class KwikController(Controller):
         path = op.realpath(op.expanduser(path))
         _backup(path)
         self.path = path
+        # The cache directory depends on the filename, clustering, and
+        # channel_group to avoid conflicts.
         self.cache_dir = op.join(op.dirname(path), '.phy',
+                                 op.splitext(op.basename(path))[0],
                                  str(clustering or 'main'),
-                                 str(channel_group or 'default'),
+                                 str(channel_group or 0),
                                  )
         self.model = KwikModel(path,
                                channel_group=channel_group,
