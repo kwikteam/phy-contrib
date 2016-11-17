@@ -7,6 +7,8 @@
 #------------------------------------------------------------------------------
 
 import logging
+import os.path as op
+import shutil
 
 from click.testing import CliRunner
 from pytest import fixture
@@ -25,11 +27,16 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 
 @fixture
-def kwik_path():
-    path = download_test_file('kwik/hybrid_10sec.kwik')
-    download_test_file('kwik/hybrid_10sec.kwx')
-    download_test_file('kwik/hybrid_10sec.dat')
-    return path
+def kwik_path(tempdir):
+    # Download the dataset.
+    paths = list(map(download_test_file, ('kwik/hybrid_10sec.kwik',
+                                          'kwik/hybrid_10sec.kwx',
+                                          'kwik/hybrid_10sec.dat')))
+    # Copy the dataset to a temporary directory.
+    for path in paths:
+        shutil.copy(path, op.join(tempdir, op.basename(path)))
+    kwik_path = op.join(tempdir, op.basename(paths[0]))
+    return kwik_path
 
 
 @fixture
@@ -57,5 +64,12 @@ def test_kwik_gui(tempdir, qtbot, kwik_path):
 
     qtbot.keyPress(gui, Qt.Key_Down)
     qtbot.keyPress(gui, Qt.Key_Down)
+    qtbot.keyPress(gui, Qt.Key_Space)
+    qtbot.keyPress(gui, Qt.Key_G)
+    qtbot.keyPress(gui, Qt.Key_Space)
+    qtbot.keyPress(gui, Qt.Key_G, modifier=Qt.AltModifier)
+    qtbot.keyPress(gui, Qt.Key_Z)
+    qtbot.keyPress(gui, Qt.Key_N, modifier=Qt.AltModifier)
+    qtbot.keyPress(gui, Qt.Key_S, modifier=Qt.ControlModifier)
 
     gui.close()
