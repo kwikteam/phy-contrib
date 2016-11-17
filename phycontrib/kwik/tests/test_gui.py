@@ -70,6 +70,12 @@ def test_kwik_gui(tempdir, qtbot, kwik_path):
     qtbot.keyPress(gui, Qt.Key_G, modifier=Qt.AltModifier)
     qtbot.keyPress(gui, Qt.Key_Z)
     qtbot.keyPress(gui, Qt.Key_N, modifier=Qt.AltModifier)
+    qtbot.keyPress(gui, Qt.Key_Space)
+    # Recluster.
+    qtbot.keyPress(gui, Qt.Key_Colon)
+    for char in 'RECLUSTER':
+        qtbot.keyPress(gui, getattr(Qt, 'Key_' + char))
+    qtbot.keyPress(gui, Qt.Key_Enter)
     qtbot.keyPress(gui, Qt.Key_S, modifier=Qt.ControlModifier)
 
     gui.close()

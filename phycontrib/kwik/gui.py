@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 try:
     from klusta.kwik import KwikModel
     from klusta.launch import cluster
-except ImportError:
+except ImportError:  # pragma: no cover
     logger.warn("Package klusta not installed: the KwikGUI will not work.")
 
 
@@ -52,7 +52,7 @@ class KwikController(Controller):
         # channel_group to avoid conflicts.
         if cache_dir:
             self.cache_dir = cache_dir
-        else:
+        else:  # pragma: no cover
             self.cache_dir = op.join(op.dirname(path), '.phy',
                                      op.splitext(op.basename(path))[0],
                                      str(clustering or 'main'),
