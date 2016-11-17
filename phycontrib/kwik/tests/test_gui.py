@@ -7,7 +7,6 @@
 #------------------------------------------------------------------------------
 
 import logging
-import os.path as op
 
 from click.testing import CliRunner
 from pytest import fixture
