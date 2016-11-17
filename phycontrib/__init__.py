@@ -12,7 +12,7 @@ import os
 import os.path as op
 import shutil
 
-from .kwik_gui import KwikGUIPlugin, KwikController  # noqa
+from .kwik import KwikGUIPlugin, KwikController  # noqa
 from .template import TemplateGUIPlugin, TemplateController  # noqa
 from . import utils  # noqa
 
@@ -43,7 +43,7 @@ def _copy_gui_state(gui_name, module_name):
 
 
 def _copy_all_gui_states():
-    _copy_gui_state('KwikGUI', 'kwik_gui')
+    _copy_gui_state('KwikGUI', 'kwik')
     _copy_gui_state('TemplateGUI', 'template')
 
 
