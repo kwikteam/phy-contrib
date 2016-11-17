@@ -43,22 +43,26 @@ def _backup(path):
 class KwikController(Controller):
     gui_name = 'KwikGUI'
 
-    def __init__(self, path, channel_group=None, clustering=None):
+    def __init__(self, path, channel_group=None, clustering=None,
+                 cache_dir=None, **kwargs):
         path = op.realpath(op.expanduser(path))
         _backup(path)
         self.path = path
         # The cache directory depends on the filename, clustering, and
         # channel_group to avoid conflicts.
-        self.cache_dir = op.join(op.dirname(path), '.phy',
-                                 op.splitext(op.basename(path))[0],
-                                 str(clustering or 'main'),
-                                 str(channel_group or 0),
-                                 )
+        if cache_dir:
+            self.cache_dir = cache_dir
+        else:
+            self.cache_dir = op.join(op.dirname(path), '.phy',
+                                     op.splitext(op.basename(path))[0],
+                                     str(clustering or 'main'),
+                                     str(channel_group or 0),
+                                     )
         self.model = KwikModel(path,
                                channel_group=channel_group,
                                clustering=None,
                                )
-        super(KwikController, self).__init__()
+        super(KwikController, self).__init__(**kwargs)
 
     def _init_data(self):
         m = self.model
