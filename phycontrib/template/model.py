@@ -131,6 +131,20 @@ class TemplateModel(object):
         self._load_data()
         self.waveform_loader = self._create_waveform_loader()
 
+    def describe(self):
+        def _print(name, value):
+            print("{0: <24}{1}".format(name, value))
+
+        _print('Data file', self.dat_path)
+        _print('Data shape',
+               'None' if self.traces is None else str(self.traces.shape))
+        _print('Number of channels', self.n_channels)
+        _print('Duration', '{:.1f}s'.format(self.duration))
+        _print('Number of spikes', self.n_spikes)
+        _print('Number of templates', self.n_templates)
+        _print('Features shape',
+               'None' if self.features is None else str(self.features.shape))
+
     def _load_data(self):
         sr = self.sample_rate
 
@@ -184,6 +198,7 @@ class TemplateModel(object):
             self.duration = self.traces.shape[0] / float(self.sample_rate)
         else:
             self.duration = self.spike_times[-1]
+        assert self.spike_times[-1] <= self.duration
 
         f = self._load_features()
         if f is not None:

@@ -13,6 +13,7 @@ import shutil
 from pytest import fixture
 
 from phy.utils._misc import _read_python
+from phy.utils.testing import captured_output
 
 from ..model import TemplateModel
 from phycontrib.utils.testing import download_test_file
@@ -59,6 +60,11 @@ def template_path(tempdir):
 
 def test_model_1(tempdir, template_path):
     params = _read_python(template_path)
-    params['dat_path'] = template_path
+    params['dat_path'] = op.join(op.dirname(template_path), params['dat_path'])
     model = TemplateModel(**params)
-    print(model)
+    with captured_output() as (stdout, stderr):
+        model.describe()
+    out = stdout.getvalue()
+    assert 'sim_binary.dat' in out
+    assert '(300000, 32)' in out
+    assert '64' in out
