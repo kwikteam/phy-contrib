@@ -81,4 +81,6 @@ def test_model_2(template_model):
 
     w = m.get_waveforms(spike_ids, channels)
     assert w.shape == (len(spike_ids), tmp.template.shape[0], len(channels))
-    print(w)
+
+    f = m.get_features(spike_ids, channels)
+    assert f.shape == (len(spike_ids), len(channels), 3)
