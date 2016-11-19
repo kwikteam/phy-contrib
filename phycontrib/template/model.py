@@ -10,7 +10,8 @@ import scipy.io as sio
 
 from phy.io.array import (_get_data_lim,
                           _concatenate_virtual_arrays,
-                          _index_of
+                          _index_of,
+                          _spikes_in_clusters,
                           )
 from phy.traces import WaveformLoader
 from phy.utils import Bunch
@@ -142,8 +143,12 @@ class TemplateModel(object):
         _print('Duration', '{:.1f}s'.format(self.duration))
         _print('Number of spikes', self.n_spikes)
         _print('Number of templates', self.n_templates)
+        _print('Closest channels', self.n_closest_channels)
         _print('Features shape',
                'None' if self.features is None else str(self.features.shape))
+
+    def spikes_in_template(self, template_id):
+        return _spikes_in_clusters(self.spike_templates, [template_id])
 
     def _load_data(self):
         sr = self.sample_rate
