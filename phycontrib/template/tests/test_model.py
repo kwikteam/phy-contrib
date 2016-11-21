@@ -84,3 +84,7 @@ def test_model_2(template_model):
 
     f = m.get_features(spike_ids, channels)
     assert f.shape == (len(spike_ids), len(channels), 3)
+
+    tf = m.get_template_features(spike_ids, channels)
+    assert tf.shape == (len(spike_ids), len(channels))
+    print(tf)

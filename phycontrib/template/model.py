@@ -110,6 +110,49 @@ def get_closest_channels(channel_positions, channel_index, n=None):
     return out
 
 
+def from_sparse(data, cols, channel_ids):
+    """Convert a sparse structure into a dense one.
+
+    Arguments:
+
+    data : array
+        A (n_spikes, n_channels_loc, ...) array with the data.
+    cols : array
+        A (n_spikes, n_channels_loc) array with the channel indices of
+        every row in data.
+    channel_ids : array
+        List of requested channel ids (columns).
+
+    """
+    # The axis in the data that contains the channels.
+    channel_axis = 1
+    shape = list(data.shape)
+    n_spikes, n_channels_loc = shape[:2]
+    # Convert column indices to relative indices given the specified
+    # channel_ids.
+    c = cols.flatten().astype(np.int32)
+    # Remove columns that do not belong to the specified channels.
+    c[~np.in1d(c, channel_ids)] = -1
+    assert np.all(np.in1d(c, np.r_[channel_ids, -1]))
+    cols_loc = _index_of(c, np.r_[channel_ids, -1]).reshape(cols.shape)
+    assert cols_loc.shape == (n_spikes, n_channels_loc)
+    n_channels = len(channel_ids)
+    # Shape of the output array.
+    out_shape = shape
+    # The channel dimension contains the number of requested channels.
+    # The last column contains irrelevant values.
+    out_shape[channel_axis] = n_channels + 1
+    out = np.zeros(out_shape, dtype=data.dtype)
+    x = np.tile(np.arange(n_spikes)[:, np.newaxis],
+                (1, n_channels_loc))
+    assert x.shape == cols_loc.shape == data.shape[:2]
+    out[x, cols_loc, ...] = data
+    # Remove the last column with values outside the specified
+    # channels.
+    out = out[:, :-1, ...]
+    return out
+
+
 class TemplateModel(object):
     def __init__(self, dat_path=None, **kwargs):
         dat_path = dat_path or ''
@@ -212,6 +255,14 @@ class TemplateModel(object):
             self.features_rows = f.rows
         else:
             self.features = None
+
+        tf = self._load_template_features()
+        if tf is not None:
+            self.template_features = tf.data
+            self.template_features_cols = tf.cols
+            self.template_features_rows = tf.rows
+        else:
+            self.template_features = None
 
     def _create_waveform_loader(self):
         # Number of time samples in the templates.
@@ -336,6 +387,30 @@ class TemplateModel(object):
 
         return Bunch(data=data, cols=cols, rows=rows)
 
+    def _load_template_features(self):
+
+        # Sparse structure: regular array with row and col indices.
+        try:
+            data = self._read_array('template_features')
+            assert data.ndim == 2
+            n_spikes, n_channels_loc = data.shape
+        except IOError:
+            return
+
+        try:
+            cols = self._read_array('template_feature_ind')
+            assert cols.shape == (self.n_templates, n_channels_loc)
+        except IOError:
+            cols = None
+
+        try:
+            rows = self._read_array('template_feature_spike_ids')
+            assert rows.shape == (n_spikes,)
+        except IOError:
+            rows = None
+
+        return Bunch(data=data, cols=cols, rows=rows)
+
     def get_template(self, template_id):
         """Return data for one template."""
         template = self.templates_unw[template_id, ...]
@@ -378,45 +453,24 @@ class TemplateModel(object):
             features = from_sparse(features, cols, channel_ids)
         return features
 
+    def get_template_features(self, spike_ids, channel_ids):
+        """Return sparse template features for given spikes."""
+        data = self.template_features
+        _, n_channels_loc = data.shape
 
-def from_sparse(data, cols, channel_ids):
-    """Convert a sparse structure into a dense one.
+        if self.template_features_rows is not None:
+            spike_ids = np.intersect1d(spike_ids, self.features_rows)
+            # Relative indices of the spikes in the self.features_spike_ids
+            # array, necessary to load features from all_features which only
+            # contains the subset of the spikes.
+            rows = _index_of(spike_ids, self.template_features_rows)
+        else:
+            rows = spike_ids
+        template_features = data[rows]
 
-    Arguments:
-
-    data : array
-        A (n_spikes, n_channels_loc, ...) array with the data.
-    cols : array
-        A (n_spikes, n_channels_loc) array with the channel indices of
-        every row in data.
-    channel_ids : array
-        List of requested channel ids (columns).
-
-    """
-    # The axis in the data that contains the channels.
-    channel_axis = 1
-    shape = list(data.shape)
-    n_spikes, n_channels_loc = shape[:2]
-    # Convert column indices to relative indices given the specified
-    # channel_ids.
-    c = cols.flatten().astype(np.int32)
-    # Remove columns that do not belong to the specified channels.
-    c[~np.in1d(c, channel_ids)] = -1
-    assert np.all(np.in1d(c, np.r_[channel_ids, -1]))
-    cols_loc = _index_of(c, np.r_[channel_ids, -1]).reshape(cols.shape)
-    assert cols_loc.shape == (n_spikes, n_channels_loc)
-    n_channels = len(channel_ids)
-    # Shape of the output array.
-    out_shape = shape
-    # The channel dimension contains the number of requested channels.
-    # The last column contains irrelevant values.
-    out_shape[channel_axis] = n_channels + 1
-    out = np.zeros(out_shape, dtype=data.dtype)
-    x = np.tile(np.arange(n_spikes)[:, np.newaxis],
-                (1, n_channels_loc))
-    assert x.shape == cols_loc.shape == data.shape[:2]
-    out[x, cols_loc, :] = data
-    # Remove the last column with values outside the specified
-    # channels.
-    out = out[:, :-1, :]
-    return out
+        if self.template_features_cols is not None:
+            assert self.template_features_cols.shape[1] == n_channels_loc
+            cols = self.template_features_cols[self.spike_templates[spike_ids]]
+            template_features = from_sparse(template_features,
+                                            cols, channel_ids)
+        return template_features
