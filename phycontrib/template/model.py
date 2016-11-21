@@ -370,7 +370,6 @@ class TemplateModel(object):
             rows = _index_of(spike_ids, self.features_rows)
         else:
             rows = spike_ids
-        n_spikes = len(rows)
         features = data[rows]
 
         if self.features_cols is not None:
