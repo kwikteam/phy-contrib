@@ -371,28 +371,53 @@ class TemplateModel(object):
         else:
             rows = spike_ids
         n_spikes = len(rows)
-        data = data[rows]
+        features = data[rows]
 
         if self.features_cols is not None:
             assert self.features_cols.shape[1] == n_channels_loc
             cols = self.features_cols[self.spike_templates[spike_ids]]
-            # Convert column indices to relative indices given the specified
-            # channel_ids.
-            c = cols.flatten().astype(np.int32)
-            # Remove columns that do not belong to the specified channels.
-            c[~np.in1d(c, channel_ids)] = -1
-            assert np.all(np.in1d(c, np.r_[channel_ids, -1]))
-            cols_loc = _index_of(c, np.r_[channel_ids, -1]).reshape(cols.shape)
-            assert cols_loc.shape == (n_spikes, n_channels_loc)
-            n_channels = len(channel_ids)
-            # The last column contains irrelevant values.
-            features = np.zeros((n_spikes, n_channels + 1, n_pcs),
-                                dtype=data.dtype)
-            x = np.tile(np.arange(n_spikes)[:, np.newaxis],
-                        (1, n_channels_loc))
-            assert x.shape == cols_loc.shape == data.shape[:2]
-            features[x, cols_loc, :] = data
-            # Remove the last column with values outside the specified
-            # channels.
-            features = features[:, :-1, :]
+            features = from_sparse(features, cols, channel_ids)
         return features
+
+
+def from_sparse(data, cols, channel_ids):
+    """Convert a sparse structure into a dense one.
+
+    Arguments:
+
+    data : array
+        A (n_spikes, n_channels_loc, ...) array with the data.
+    cols : array
+        A (n_spikes, n_channels_loc) array with the channel indices of
+        every row in data.
+    channel_ids : array
+        List of requested channel ids (columns).
+
+    """
+    # The axis in the data that contains the channels.
+    channel_axis = 1
+    shape = list(data.shape)
+    n_spikes, n_channels_loc = shape[:2]
+    # Convert column indices to relative indices given the specified
+    # channel_ids.
+    c = cols.flatten().astype(np.int32)
+    # Remove columns that do not belong to the specified channels.
+    c[~np.in1d(c, channel_ids)] = -1
+    assert np.all(np.in1d(c, np.r_[channel_ids, -1]))
+    cols_loc = _index_of(c, np.r_[channel_ids, -1]).reshape(cols.shape)
+    assert cols_loc.shape == (n_spikes, n_channels_loc)
+    n_channels = len(channel_ids)
+    # Shape of the output array.
+    out_shape = shape
+    # The channel dimension contains the number of requested channels.
+    # The last column contains irrelevant values.
+    out_shape[channel_axis] = n_channels + 1
+    out = np.zeros(out_shape, dtype=data.dtype)
+    x = np.tile(np.arange(n_spikes)[:, np.newaxis],
+                (1, n_channels_loc))
+    assert x.shape == cols_loc.shape == data.shape[:2]
+    out[x, cols_loc, :] = data
+    # Remove the last column with values outside the specified
+    # channels.
+    out = out[:, :-1, :]
+    return out
