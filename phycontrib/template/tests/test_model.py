@@ -43,6 +43,8 @@ _FILES = ['template/params.py',
           'template/similar_templates.npy',
           'template/template_feature_ind.npy',
           'template/templates_unw.npy',
+          'template/cluster_group.tsv',
+          'template/cluster_quality.csv',
           ]
 
 
@@ -88,3 +90,12 @@ def test_model_2(template_model):
     tf = m.get_template_features(spike_ids, channels)
     assert tf.shape == (len(spike_ids), len(channels))
     print(tf)
+
+
+def test_model_metadata(template_model):
+    m = template_model
+    assert m.get_metadata('group').get(4, None) == 'good'
+    assert m.get_metadata('unknown').get(4, None) is None
+    assert m.get_metadata('quality').get(4, None) == '1'
+    assert m.get_metadata('quality').get(5, None) == '2'
+    assert m.get_metadata('quality').get(6, None) == ''

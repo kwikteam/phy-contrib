@@ -1,5 +1,6 @@
 
 import csv
+import glob
 import logging
 import os
 import os.path as op
@@ -31,21 +32,27 @@ def write_array(name, arr):
     np.save(name, arr)
 
 
-def load_metadata(filename, cluster_ids):
-    """Load cluster metadata from a CSV file."""
-    dic = {cluster_id: None for cluster_id in cluster_ids}
+def load_metadata(filename):
+    """Load cluster metadata from a CSV file.
+
+    Return (field_name, dictionary).
+
+    """
+    dic = {}
     if not op.exists(filename):
         return dic
+    delimiter = '\t' if filename.endswith('.tsv') else ','
     with open(filename, 'r') as f:
-        reader = csv.reader(f, delimiter='\t')
+        reader = csv.reader(f, delimiter=delimiter)
         # Skip the header.
         for row in reader:
+            _, field_name = row
             break
         for row in reader:
             cluster, value = row
             cluster = int(cluster)
             dic[cluster] = value
-    return dic
+    return field_name, dic
 
 
 def save_metadata(filename, field_name, metadata):
@@ -264,6 +271,8 @@ class TemplateModel(object):
         else:
             self.template_features = None
 
+        self.metadata = self._load_metadata()
+
     def _create_waveform_loader(self):
         # Number of time samples in the templates.
         nsw = self.templates_unw.shape[1]
@@ -283,6 +292,26 @@ class TemplateModel(object):
 
     def _write_array(self, name, arr):
         return write_array(self._get_array_path(name), arr)
+
+    def _load_metadata(self):
+        """Load cluster metadata from all CSV files in the data directory."""
+        files = glob.glob(op.join(self.dir_path, '*.csv'))
+        files.extend(glob.glob(op.join(self.dir_path, '*.tsv')))
+        metadata = {}
+        for filename in files:
+            field_name, values = load_metadata(filename)
+            metadata[field_name] = values
+        return metadata
+
+    def get_metadata(self, name):
+        """Return a dictionary {cluster_id: value} for a cluster metadata
+        field."""
+        return self.metadata.get(name, {})
+
+    def save_metadata(self, name, values):
+        """Save a dictionary {cluster_id: value} with cluster metadata."""
+        path = op.join(self.dir_path, 'cluster_%s.csv' % name)
+        save_metadata(path, name, values)
 
     def _load_channel_map(self):
         return self._read_array('channel_map').astype(np.int32)
