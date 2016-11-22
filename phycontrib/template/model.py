@@ -62,8 +62,9 @@ def save_metadata(filename, field_name, metadata):
         file = open(filename, 'wb')
     else:
         file = open(filename, 'w', newline='')
+    delimiter = '\t' if filename.endswith('.tsv') else ','
     with file as f:
-        writer = csv.writer(f, delimiter='\t')
+        writer = csv.writer(f, delimiter=delimiter)
         writer.writerow(['cluster_id', field_name])
         writer.writerows([(cluster, metadata[cluster])
                           for cluster in sorted(metadata)])
@@ -299,6 +300,7 @@ class TemplateModel(object):
         files.extend(glob.glob(op.join(self.dir_path, '*.tsv')))
         metadata = {}
         for filename in files:
+            logger.debug("Load `{}`.".format(filename))
             field_name, values = load_metadata(filename)
             metadata[field_name] = values
         return metadata
@@ -310,7 +312,8 @@ class TemplateModel(object):
 
     def save_metadata(self, name, values):
         """Save a dictionary {cluster_id: value} with cluster metadata."""
-        path = op.join(self.dir_path, 'cluster_%s.csv' % name)
+        path = op.join(self.dir_path, 'cluster_%s.tsv' % name)
+        logger.debug("Save `{}`.".format(path))
         save_metadata(path, name, values)
 
     def _load_channel_map(self):

@@ -99,3 +99,7 @@ def test_model_metadata(template_model):
     assert m.get_metadata('quality').get(4, None) == '1'
     assert m.get_metadata('quality').get(5, None) == '2'
     assert m.get_metadata('quality').get(6, None) == ''
+
+    m.save_metadata('quality', {6: 3})
+    m.metadata = m._load_metadata()
+    assert m.get_metadata('quality').get(6, None) == '3'
