@@ -305,6 +305,11 @@ class TemplateModel(object):
             metadata[field_name] = values
         return metadata
 
+    @property
+    def metadata_fields(self):
+        """List of metadata fields."""
+        return sorted(self.metadata)
+
     def get_metadata(self, name):
         """Return a dictionary {cluster_id: value} for a cluster metadata
         field."""
@@ -364,13 +369,13 @@ class TemplateModel(object):
         logger.debug("Loading templates.")
         templates = self._read_array('templates')
         # templates[np.isnan(templates)] = 0
-        return templates
+        return templates.astype(np.float64)
 
     def _load_templates_unw(self):
         logger.debug("Loading unwhitened templates.")
         templates_unw = self._read_array('templates_unw')
         # templates_unw[np.isnan(templates_unw)] = 0
-        return templates_unw
+        return templates_unw.astype(np.float64)
 
     def _compute_templates_unw(self, templates, wmi):
         logger.debug("Couldn't find unwhitened templates, computing them.")
@@ -462,7 +467,8 @@ class TemplateModel(object):
         """Return several waveforms on specified channels."""
         if self.waveform_loader is None:
             return
-        return self.waveform_loader.get(spike_ids, channel_ids)
+        return self.waveform_loader.get(spike_ids,
+                                        channel_ids).astype(np.float64)
 
     def get_features(self, spike_ids, channel_ids):
         """Return sparse features for given spikes."""
@@ -483,7 +489,7 @@ class TemplateModel(object):
             assert self.features_cols.shape[1] == n_channels_loc
             cols = self.features_cols[self.spike_templates[spike_ids]]
             features = from_sparse(features, cols, channel_ids)
-        return features
+        return features.astype(np.float64)
 
     def get_template_features(self, spike_ids, channel_ids):
         """Return sparse template features for given spikes."""
@@ -505,4 +511,4 @@ class TemplateModel(object):
             cols = self.template_features_cols[self.spike_templates[spike_ids]]
             template_features = from_sparse(template_features,
                                             cols, channel_ids)
-        return template_features
+        return template_features.astype(np.float64)

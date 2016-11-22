@@ -7,34 +7,24 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import csv
-import glob
 import logging
 from operator import itemgetter
-import os
 import os.path as op
-import shutil
 
 import click
 import numpy as np
-import scipy.io as sio
 
 from phy.cluster.manual.controller import Controller
 from phy.cluster.manual.views import (select_traces, ScatterView)
 from phy.gui import create_app, run_app  # noqa
 from phy.io.array import (concat_per_cluster,
-                          _concatenate_virtual_arrays,
-                          _index_of,
-                          _unique,
-                          get_excerpts,
                           )
-from phy.plot.transform import _normalize
 from phy.utils.cli import _run_cmd
-from phy.stats.clusters import get_waveform_amplitude
-from phy.traces import WaveformLoader
 from phy.utils import Bunch, IPlugin
 from phy.utils.cli import _add_log_file
 from phy.utils._misc import _read_python
+
+from .model import TemplateModel
 
 logger = logging.getLogger(__name__)
 
@@ -109,143 +99,12 @@ class FeatureTemplateView(ScatterView):
 # Template Controller
 #------------------------------------------------------------------------------
 
-filenames = {
-    'spike_templates': 'spike_templates.npy',
-    'spike_clusters': 'spike_clusters.npy',
-    'cluster_groups': 'cluster_groups.csv',
-
-    'spike_samples': 'spike_times.npy',
-    'amplitudes': 'amplitudes.npy',
-    'templates': 'templates.npy',
-    'templates_unw': 'templates_unw.npy',
-
-    'channel_mapping': 'channel_map.npy',
-    'channel_positions': 'channel_positions.npy',
-    'whitening_matrix': 'whitening_mat.npy',
-
-    'features': 'pc_features.npy',
-    'features_ind': 'pc_feature_ind.npy',
-    'features_spike_ids': 'pc_feature_spike_ids.npy',
-
-    'template_features': 'template_features.npy',
-    'template_features_ind': 'template_feature_ind.npy',
-
-    'similar_templates': 'similar_templates.npy',
-}
-
-
-def read_array(name):
-    fn = filenames[name]
-    arr_name, ext = op.splitext(fn)
-    if ext == '.mat':
-        return sio.loadmat(fn)[arr_name]
-    elif ext == '.npy':
-        return np.load(fn)
-
-
-def write_array(name, arr):
-    np.save(name, arr)
-
-
-def get_closest_channels(channel_positions, n=None):
-    """Return a (n_channels, n) array with the closest channels to
-    each channel.
-    """
-    x = channel_positions[:, 0]
-    y = channel_positions[:, 1]
-    dx = x[:, np.newaxis] - x[np.newaxis, :]
-    dy = y[:, np.newaxis] - y[np.newaxis, :]
-    d = dx ** 2 + dy ** 2
-    out = np.argsort(d, axis=1)
-    if n:
-        out = out[:, :n]
-    return out
-
-
-def get_masks(templates, closest_channels):
-    # TODO: precompute channels to each channel
-    n_templates, n_samples_templates, n_channels = templates.shape
-    # Template max.
-    amp = templates.max(axis=1)  # (n_templates, n_channels)
-    # Template min.
-    mi = templates.min(axis=1)  # (n_templates, n_channels)
-    # Template amplitudes across all channels.
-    amp -= mi  # (n_templates, n_channels)
-    # The best channel for each template.
-    best = np.argmax(amp, axis=1)  # (n_templates,)
-    # Create the masks array.
-    masks = np.zeros((n_templates, n_channels))
-    assert closest_channels.shape[0] == n_channels
-    n = closest_channels.shape[1]
-    # For each template, the closest channels.
-    ch = closest_channels[best, :]  # (n_templates, n)
-    x = np.arange(n_templates)
-    x = np.tile(x[:, np.newaxis], (1, n))
-    masks[x, ch] = 1
-    return masks
-
-
-class MaskLoader(object):
-    def __init__(self, cluster_masks, spike_templates):
-        self._spike_templates = spike_templates
-        self._cluster_masks = cluster_masks
-        self.shape = (len(spike_templates), cluster_masks.shape[1])
-
-    def __getitem__(self, item):
-        # item contains spike ids
-        clu = self._spike_templates[item]
-        return self._cluster_masks[clu]
-
-
-def _densify(rows, arr, ind, ncols):
-    ns = len(rows)
-    nt = ind.shape[1]
-    out = np.zeros((ns,) + arr.shape[1:-1] + (ncols,))
-    out[np.arange(ns)[:, np.newaxis], ..., ind] = arr[rows[:, np.newaxis], ...,
-                                                      np.arange(nt)]
-    return out
-
-
-def load_metadata(filename, cluster_ids):
-    dic = {cluster_id: None for cluster_id in cluster_ids}
-    if not op.exists(filename):
-        return dic
-    with open(filename, 'r') as f:
-        reader = csv.reader(f, delimiter='\t')
-        # Skip the header.
-        for row in reader:
-            break
-        for row in reader:
-            cluster, value = row
-            cluster = int(cluster)
-            dic[cluster] = value
-    return dic
-
-
-def save_metadata(filename, field_name, metadata):
-    """Save metadata in a CSV file."""
-    import sys
-    if sys.version_info[0] < 3:
-        file = open(filename, 'wb')
-    else:
-        file = open(filename, 'w', newline='')
-    with file as f:
-        writer = csv.writer(f, delimiter='\t')
-        writer.writerow(['cluster_id', field_name])
-        writer.writerows([(cluster, metadata[cluster])
-                          for cluster in sorted(metadata)])
-
-
 class TemplateController(Controller):
     gui_name = 'TemplateGUI'
 
-    def __init__(self, dat_path=None, **kwargs):
-        dat_path = dat_path or ''
-        dir_path = (op.dirname(op.realpath(op.expanduser(dat_path)))
-                    if dat_path else os.getcwd())
-        self.cache_dir = op.join(dir_path, '.phy')
-        self.dat_path = dat_path
-        self.__dict__.update(kwargs)
+    def __init__(self, *args, **kwargs):
+        self.model = TemplateModel(*args, **kwargs)
+        self.cache_dir = op.join(self.model.dir_path, '.phy')
         super(TemplateController, self).__init__()
 
     def _init_data(self):
@@ -427,6 +286,7 @@ class TemplateController(Controller):
             filter_order = None
 
         n_closest_channels = getattr(self, 'max_n_unmasked_channels', 16)
+        mask_threshold = getattr(self, 'waveform_mask_threshold', None)
         self.closest_channels = get_closest_channels(self.channel_positions,
                                                      n_closest_channels,
                                                      )
@@ -437,10 +297,12 @@ class TemplateController(Controller):
         nsw = self.n_samples_waveforms
         if traces is not None:
             waveforms = WaveformLoader(traces=traces,
+                                       masks=self.all_masks,
                                        spike_samples=spike_samples,
                                        n_samples_waveforms=nsw,
                                        filter_order=filter_order,
                                        sample_rate=self.sample_rate,
+                                       mask_threshold=mask_threshold,
                                        )
         else:
             waveforms = None
@@ -454,191 +316,95 @@ class TemplateController(Controller):
     def _set_manual_clustering(self):
         super(TemplateController, self)._set_manual_clustering()
         mc = self.manual_clustering
-        # Load labels.
-        files = glob.glob('*.csv')
-        for filename in files:
-            if filename == 'cluster_groups.csv':
-                continue
-            field_name = op.basename(filename)
-            values = load_metadata(filename, self.cluster_ids)
-            for cluster_id in self.cluster_ids:
+        for field_name in self.model.metadata_fields:
+            values = self.model.get_metadata(field_name)
+            for cluster_id, value in values.items():
                 mc.cluster_meta.set(field_name, [cluster_id],
                                     values.get(cluster_id, None),
                                     add_to_stack=False)
 
-    def get_cluster_templates(self, cluster_id):
-        spike_ids = self.spikes_per_cluster(cluster_id)
-        st = self.spike_templates[spike_ids]
-        return np.bincount(st, minlength=self.n_templates)
-
-    def get_channel_noise(self):
-        ex = get_excerpts(self.all_traces, n_excerpts=100, excerpt_size=100)
-        return ex.std(axis=0)
-
     def get_background_features(self):
         # Disable for now
         pass
-
-    def get_waveforms_amplitude(self, cluster_id):
-        nt = self.get_cluster_templates(cluster_id)
-        # Find the template with the highest number of spikes belonging
-        # to the selected cluster.
-        template_id = np.argmax(nt)
-        # Find the masked template waveform amplitude.
-        mw = self.templates[[template_id]]
-        mm = self.template_masks[[template_id]]
-        mw = mw[0, ...]
-        mm = mm[0, ...]
-        assert mw.ndim == 2
-        assert mw.ndim == 2
-        return get_waveform_amplitude(mm, mw)
 
     def _init_context(self):
         super(TemplateController, self)._init_context()
         ctx = self.context
         self.get_amplitudes = concat_per_cluster(
             ctx.memcache(self.get_amplitudes))
-        self.get_cluster_templates = ctx.memcache(self.get_cluster_templates)
+        self.get_template_counts = ctx.memcache(self.get_template_counts)
         self.get_cluster_pair_features = ctx.memcache(
             self.get_cluster_pair_features)
         self._cluster_template_similarities = ctx.memcache(
             self._cluster_template_similarities)
         self._sim_ij = ctx.memcache(self._sim_ij)
 
-        self.get_channel_noise = ctx.cache(self.get_channel_noise)
+    def get_template_counts(self, cluster_id):
+        """Return a histogram of the number of spikes in each template for
+        a given cluster."""
+        spike_ids = self.spikes_per_cluster(cluster_id)
+        st = self.model.spike_templates[spike_ids]
+        return np.bincount(st, minlength=self.model.n_templates)
 
-    def get_waveform_lims(self):
-        n_spikes = self.n_spikes_waveforms_lim
-        arr = self.all_waveforms
-        if arr is None:
-            return 0., 1.
-        n = arr.shape[0]
-        k = max(1, n // n_spikes)
-        # Extract waveforms.
-        arr = arr[::k].astype(np.float64)
-        mean = arr.mean(axis=1).mean(axis=1)
-        arr -= mean[:, np.newaxis, np.newaxis]
-        # Take the corresponding masks.
-        masks = self.all_masks[::k].copy()
-        arr = arr * masks[:, np.newaxis, :]
-        # NOTE: on some datasets, there are a few outliers that screw up
-        # the normalization. These parameters should be customizable.
-        m = np.percentile(arr, .05)
-        M = np.percentile(arr, 99.95)
-        return m, M
+    def get_templates(self, cluster_id):
+        template_ids = np.nonzero(self.get_template_counts(cluster_id))[0]
+        templates = [self.model.get_template(template_id)
+                     for template_id in template_ids]
+        channel_ids = set(template.channels for template in templates)
+        channel_ids = sorted(channel_ids)
+        out = Bunch()
+        out.templates = [template.data for template in templates]
+        out.channel_ids = channel_ids
+        return out
 
     def get_waveforms(self, cluster_id):
-        m, M = self.get_waveform_lims()
-        if self.all_waveforms is not None:
-            # Waveforms.
-            waveforms_b = self._select_data(cluster_id,
-                                            self.all_waveforms,
-                                            self.n_spikes_waveforms,
-                                            )
-            w = waveforms_b.data
-            # Sparsify.
-            channels = np.nonzero(w.mean(axis=1).mean(axis=0))[0]
-            w = w[:, :, channels]
-            waveforms_b.channels = channels
-            # Normalize.
-            mean = w.mean(axis=1).mean(axis=1)
-            w = w.astype(np.float64)
-            w -= mean[:, np.newaxis, np.newaxis]
-            w = _normalize(w, m, M)
-            waveforms_b.data = w
-            waveforms_b.cluster_id = cluster_id
-            waveforms_b.tag = 'waveforms'
-        else:
-            waveforms_b = None
-        # Find the templates corresponding to the cluster.
-        template_ids = np.nonzero(self.get_cluster_templates(cluster_id))[0]
-        # Templates.
-        templates = self.templates_unw[template_ids]
-        assert templates.ndim == 3
-        # Masks.
-        masks = self.template_masks[template_ids]
-        assert masks.ndim == 2
-        assert templates.shape[0] == masks.shape[0]
-        # Find mean amplitude.
         spike_ids = self._select_spikes(cluster_id,
-                                        self.n_spikes_waveforms_lim)
-        mean_amp = self.all_amplitudes[spike_ids].mean()
-        # Normalize.
-        # mean = templates.mean(axis=1).mean(axis=1)
-        templates = templates.astype(np.float64).copy()
-        # templates -= mean[:, np.newaxis, np.newaxis]
-        templates *= mean_amp
-        templates *= 2. / (M - m)
-        template_b = Bunch(data=templates,
-                           masks=masks,
-                           alpha=1.,
-                           cluster_id=cluster_id,
-                           tag='templates',
-                           )
-        if waveforms_b is not None:
-            return [waveforms_b, template_b]
-        else:
-            return [template_b]
+                                        self.n_spikes_waveforms,
+                                        batch_size=10,
+                                        )
+        templates = self.get_templates(cluster_id)
+        channel_ids = templates.channel_ids
+        # amplitudes = self.model.amplitudes[spike_ids]
+        # Find the templates corresponding to the cluster.
+        waveforms = self.model.get_waveforms(spike_ids, channel_ids)
+        mean = waveforms.mean(axis=1).mean(axis=1)
+        waveforms -= mean[:, np.newaxis, np.newaxis]
+        out = Bunch(data=waveforms,
+                    channel_ids=channel_ids,
+                    cluster_id=cluster_id,
+                    )
+        return [out]
 
     def get_features(self, cluster_id, load_all=False):
-        # Overriden to take into account the sparse structure.
-        # Only keep spikes belonging to the features spike ids.
-        if self.features_spike_ids is not None:
-            # All spikes
-            spike_ids = self._select_spikes(cluster_id)
-            spike_ids = np.intersect1d(spike_ids, self.features_spike_ids)
-            # Relative indices of the spikes in the self.features_spike_ids
-            # array, necessary to load features from all_features which only
-            # contains the subset of the spikes.
-            spike_ids_rel = _index_of(spike_ids, self.features_spike_ids)
-        else:
-            spike_ids = self._select_spikes(cluster_id,
-                                            self.n_spikes_features
-                                            if not load_all else None)
-            spike_ids_rel = spike_ids
-        st = self.spike_templates[spike_ids]
-        nc = self.n_channels
-        nfpc = self.n_features_per_channel
-        ns = len(spike_ids)
-        f = _densify(spike_ids_rel, self.all_features,
-                     self.features_ind[st, :], self.n_channels)
-        f = np.transpose(f, (0, 2, 1))
-        assert f.shape == (ns, nc, nfpc)
-        b = Bunch()
-
-        # Normalize features.
-        m = self.get_feature_lim()
-        f = _normalize(f, -m, m)
-
-        b.data = f
-        b.spike_ids = spike_ids
-        b.spike_clusters = self.spike_clusters[spike_ids]
-        b.masks = self.all_masks[spike_ids]
-        return b
+        spike_ids = self._select_spikes(cluster_id,
+                                        self.n_spikes_features
+                                        if not load_all else None)
+        templates = self.get_templates(cluster_id)
+        channel_ids = templates.channel_ids
+        features = self.model.get_features(spike_ids, channel_ids)
+        out = Bunch()
+        out.data = features
+        out.spike_ids = spike_ids
+        out.spike_clusters = self.model.spike_clusters[spike_ids]
+        return out
 
     def get_amplitudes(self, cluster_id):
         spike_ids = self._select_spikes(cluster_id, self.n_spikes_features)
         d = Bunch()
         d.spike_ids = spike_ids
-        d.x = self.spike_times[spike_ids]
-        d.y = self.all_amplitudes[spike_ids]
+        d.x = self.model.spike_times[spike_ids]
+        d.y = self.model.all_amplitudes[spike_ids]
         M = d.y.max()
-        d.data_bounds = [0, 0, self.duration, M]
+        d.data_bounds = [0, 0, self.model.duration, M]
         return d
 
-    def _get_template_features(self, spike_ids):
-        tf = self.template_features
-        tfi = self.template_features_ind
-        # For each spike, the non-zero columns.
-        ind = tfi[self.spike_templates[spike_ids]]
-        return _densify(spike_ids, tf, ind, self.n_templates)
-
     def get_cluster_pair_features(self, ci, cj):
+        # TODO
         si = self._select_spikes(ci, self.n_spikes_features)
         sj = self._select_spikes(cj, self.n_spikes_features)
 
-        ni = self.get_cluster_templates(ci)
-        nj = self.get_cluster_templates(cj)
+        ni = self.get_template_counts(ci)
+        nj = self.get_template_counts(cj)
 
         ti = self._get_template_features(si)
         x0 = np.average(ti, weights=ni, axis=1)
@@ -666,22 +432,23 @@ class TemplateController(Controller):
 
     def get_traces(self, interval):
         """Load traces and spikes in an interval."""
-        tr = select_traces(self.all_traces, interval,
+        tr = select_traces(self.model.traces, interval,
                            sample_rate=self.sample_rate,
                            )
         tr = tr - np.mean(tr, axis=0)
 
-        a, b = self.spike_times.searchsorted(interval)
-        sc = self.spike_templates[a:b]
+        a, b = self.model.spike_times.searchsorted(interval)
+        sc = self.model.spike_templates[a:b]
+        m = self.model
 
         # Remove templates.
         tr_sub = subtract_templates(tr,
                                     start=interval[0],
-                                    spike_times=self.spike_times[a:b],
+                                    spike_times=m.spike_times[a:b],
                                     spike_clusters=sc,
-                                    amplitudes=self.all_amplitudes[a:b],
-                                    spike_templates=self.templates_unw[sc],
-                                    sample_rate=self.sample_rate,
+                                    amplitudes=m.amplitudes[a:b],
+                                    spike_templates=m.templates_unw[sc],
+                                    sample_rate=m.sample_rate,
                                     )
 
         return [Bunch(traces=tr),
@@ -690,7 +457,7 @@ class TemplateController(Controller):
 
     def _cluster_template_similarities(self, cluster_id):
         # Templates of the cluster.
-        temp = np.nonzero(self.get_cluster_templates(cluster_id))[0]
+        temp = np.nonzero(self.get_template_counts(cluster_id))[0]
         # Max similarity of cluster_id with all templates.
         return np.max(self.similar_templates[temp, :], axis=0)
 
@@ -701,7 +468,7 @@ class TemplateController(Controller):
         # Templates of the cluster.
         if cj < self.n_templates:
             return sims[cj]
-        temp = np.nonzero(self.get_cluster_templates(cj))[0]
+        temp = np.nonzero(self.get_template_counts(cj))[0]
         return np.max(sims[temp])
 
     def similarity(self, cluster_id):
@@ -720,57 +487,54 @@ class TemplateController(Controller):
         """Create the template GUI."""
         f = super(TemplateController, self).create_gui
         gui = f(name=self.gui_name,
-                subtitle=self.dat_path,
+                subtitle=self.model.dat_path,
                 config_dir=config_dir,
                 )
 
         # Add custom views for the template GUI.
-        if self.all_amplitudes is not None:
-            self.add_amplitude_view(gui)
-        if self.template_features is not None:
-            self.add_feature_template_view(gui)
+        # if self.model.amplitudes is not None:
+        #     self.add_amplitude_view(gui)
+        # if self.model.template_features is not None:
+        #     self.add_feature_template_view(gui)
 
         # Add the waveform view even if there is no raw data.
-        if self.all_waveforms is None:
-            self.add_waveform_view(gui)
+        # if self.model.waveforms is None:
+        #     self.add_waveform_view(gui)
 
         # Add the option to show/hide waveforms.
-        waveform_view = gui.get_view('WaveformView', is_visible=False)
-        if waveform_view:
-            @waveform_view.actions.add(shortcut='w')
-            def toggle_waveforms():
-                """Show or hide the waveforms in the waveform view."""
-                if not waveform_view.filtered_tags:
-                    waveform_view.filter_by_tag('templates')
-                else:
-                    waveform_view.filter_by_tag()
-
-        # Save.
-        @gui.connect_
-        def on_request_save(spike_clusters, groups, *labels):
-            # Save the clusters.
-            np.save(filenames['spike_clusters'], spike_clusters)
-            # Save cluster groups.
-            save_metadata(filenames['cluster_groups'], 'group', groups)
-            # Save other labels.
-            for field_name, dic in labels:
-                save_metadata('cluster_%s.csv' % field_name, field_name, dic)
+        # waveform_view = gui.get_view('WaveformView', is_visible=False)
+        # if waveform_view:
+        #     @waveform_view.actions.add(shortcut='w')
+        #     def toggle_waveforms():
+        #         """Show or hide the waveforms in the waveform view."""
+        #         if not waveform_view.filtered_tags:
+        #             waveform_view.filter_by_tag('templates')
+        #         else:
+        #             waveform_view.filter_by_tag()
+        #
+        # # Save.
+        # @gui.connect_
+        # def on_request_save(spike_clusters, groups, *labels):
+        #     # Save the clusters.
+        #     np.save(filenames['spike_clusters'], spike_clusters)
+        #     for field_name, values in labels:
+        #         self.model.save_metadata(field_name, values)
 
         # Save the memcache when closing the GUI.
         @gui.connect_
         def on_close():
             self.context.save_memcache()
 
-        # Add split on templates action.
-        mc = self.manual_clustering
-
-        @mc.actions.add(shortcut='shift+ctrl+k')
-        def split_init(cluster_ids=None):
-            """Split a cluster according to the original templates."""
-            if cluster_ids is None:
-                cluster_ids = mc.selected
-            spike_ids = mc.clustering.spikes_in_clusters(cluster_ids)
-            mc.split(spike_ids, self.spike_templates[spike_ids])
+        # # Add split on templates action.
+        # mc = self.manual_clustering
+        #
+        # @mc.actions.add(shortcut='shift+ctrl+k')
+        # def split_init(cluster_ids=None):
+        #     """Split a cluster according to the original templates."""
+        #     if cluster_ids is None:
+        #         cluster_ids = mc.selected
+        #     spike_ids = mc.clustering.spikes_in_clusters(cluster_ids)
+        #     mc.split(spike_ids, self.model.spike_templates[spike_ids])
 
         return gui
 
