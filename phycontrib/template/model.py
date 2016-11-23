@@ -451,7 +451,7 @@ class TemplateModel(object):
     def get_template(self, template_id):
         """Return data for one template."""
         template = self.templates_unw[template_id, ...]
-        amplitude = template.max() - template.min()
+        amplitude = template.max(axis=0) - template.min(axis=0)
         best_channel = np.argmax(amplitude)
         channels = get_closest_channels(self.channel_positions, best_channel,
                                         self.n_closest_channels)
