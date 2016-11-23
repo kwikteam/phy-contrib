@@ -259,6 +259,7 @@ class TemplateModel(object):
         f = self._load_features()
         if f is not None:
             self.features = f.data
+            self.n_features_per_channel = self.features.shape[2]
             self.features_cols = f.cols
             self.features_rows = f.rows
         else:

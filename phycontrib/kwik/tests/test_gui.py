@@ -52,7 +52,8 @@ def test_kwik_describe(runner, kwik_path):
     assert 'main*' in res.output
 
 
-def test_kwik_gui(tempdir, qtbot, kwik_path):
+def _test_kwik_gui(tempdir, qtbot, kwik_path):
+    # TODO
     controller = KwikController(kwik_path,
                                 config_dir=tempdir,
                                 cache_dir=tempdir,
