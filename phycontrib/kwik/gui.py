@@ -14,7 +14,7 @@ import shutil
 import click
 
 from phy import IPlugin
-from phy.cluster.manual.controller import Controller
+from phy.cluster.controller import Controller
 from phy.gui import create_app, run_app
 from phy.utils.tempdir import TemporaryDirectory
 from phy.utils.cli import _run_cmd, _add_log_file
@@ -95,11 +95,11 @@ class KwikController(Controller):
                 config_dir=config_dir,
                 )
 
-        @self.manual_clustering.actions.add
+        @self.picker.actions.add
         def recluster():
             """Relaunch KlustaKwik on the selected clusters."""
             # Selected clusters.
-            cluster_ids = self.manual_clustering.selected
+            cluster_ids = self.picker.selected
             spike_ids = self.selector.select_spikes(cluster_ids)
             logger.info("Running KlustaKwik on %d spikes.", len(spike_ids))
 
@@ -110,7 +110,7 @@ class KwikController(Controller):
                                                    num_starting_clusters=10,
                                                    tempdir=tempdir,
                                                    )
-            self.manual_clustering.split(spike_ids, spike_clusters)
+            self.picker.split(spike_ids, spike_clusters)
 
         # Save.
         @gui.connect_
