@@ -14,7 +14,6 @@ import shutil
 import click
 
 from phy import IPlugin
-from phy.cluster.controller import Controller
 from phy.gui import create_app, run_app
 from phy.utils.tempdir import TemporaryDirectory
 from phy.utils.cli import _run_cmd, _add_log_file
@@ -40,7 +39,7 @@ def _backup(path):
         shutil.copy(path, path_backup)
 
 
-class KwikController(Controller):
+class KwikController(object):
     gui_name = 'KwikGUI'
 
     def __init__(self, path, channel_group=None, clustering=None,

@@ -17,18 +17,19 @@ import numpy as np
 from phy.cluster.picker import ClusterPicker
 from phy.cluster.views import (WaveformView,
                                FeatureView,
+                               TraceView,
+                               select_traces,
                                # CorrelogramView,
-                               # TraceView,
                                # ScatterView,
                                )
 from phy.gui import create_app, run_app, GUI
 from phy.io.array import (Selector,
                           )
 from phy.io.context import Context
-from phy.utils.cli import _run_cmd
 from phy.utils import Bunch, IPlugin, EventEmitter
-from phy.utils.cli import _add_log_file
+from phy.utils._color import ColorSelector
 from phy.utils._misc import _read_python
+from phy.utils.cli import _run_cmd, _add_log_file
 
 from .model import TemplateModel
 
@@ -113,26 +114,39 @@ class TemplateController(EventEmitter):
         self.context = Context(self.cache_dir)
         self.config_dir = config_dir
 
-        self._set_picker()
-        self._set_selector()
+        self.picker = self._set_picker()
+        self.selector = self._set_selector()
+        self.color_selector = ColorSelector()
+
+    # Internal methods
+    # -------------------------------------------------------------------------
 
     def _set_picker(self):
         # Load the new cluster id.
         new_cluster_id = self.context.load('new_cluster_id'). \
             get('new_cluster_id', None)
         cluster_groups = self.model.metadata['group']
-        self.picker = ClusterPicker(self.model.spike_clusters,
-                                    similarity=self.similarity,
-                                    cluster_groups=cluster_groups,
-                                    new_cluster_id=new_cluster_id,
-                                    )
-        self.picker.add_column(self.get_best_channel, name='channel')
-        self.picker.add_column(self.get_probe_depth, name='depth')
+        picker = ClusterPicker(self.model.spike_clusters,
+                               similarity=self.similarity,
+                               cluster_groups=cluster_groups,
+                               new_cluster_id=new_cluster_id,
+                               )
+        picker.add_column(self.get_best_channel, name='channel')
+        picker.add_column(self.get_probe_depth, name='depth')
+        return picker
 
     def _set_selector(self):
         def spikes_per_cluster(cluster_id):
             return self.picker.clustering.spikes_per_cluster[cluster_id]
-        self.selector = Selector(spikes_per_cluster)
+        return Selector(spikes_per_cluster)
+
+    def _add_view(self, gui, view):
+        view.attach(gui)
+        self.emit('add_view', gui, view)
+        return view
+
+    # Model methods
+    # -------------------------------------------------------------------------
 
     def get_template_counts(self, cluster_id):
         """Return a histogram of the number of spikes in each template for
@@ -181,10 +195,8 @@ class TemplateController(EventEmitter):
         channel_id = self.get_best_channel(cluster_id)
         return self.model.channel_positions[channel_id][1]
 
-    def _add_view(self, gui, view):
-        view.attach(gui)
-        self.emit('add_view', gui, view)
-        return view
+    # Waveforms
+    # -------------------------------------------------------------------------
 
     def _get_waveforms(self, cluster_id):
         spike_ids = self.selector.select_spikes([cluster_id],
@@ -205,6 +217,9 @@ class TemplateController(EventEmitter):
                          best_channels=self.get_best_channels,
                          )
         return self._add_view(gui, v)
+
+    # Features
+    # -------------------------------------------------------------------------
 
     def _get_features(self, cluster_id):
         spike_ids = self.selector.select_spikes([cluster_id],
@@ -227,6 +242,51 @@ class TemplateController(EventEmitter):
                         )
         return self._add_view(gui, v)
 
+    # Features
+    # -------------------------------------------------------------------------
+
+    def _get_traces(self, interval):
+        m = self.model
+        p = self.picker
+        cs = self.color_selector
+        sr = m.sample_rate
+        traces = select_traces(m.traces, interval, sample_rate=sr)
+        out = Bunch(data=traces)
+        a, b = m.spike_times.searchsorted(interval)
+        s0, s1 = int(round(interval[0] * sr)), int(round(interval[1] * sr))
+        out.waveforms = []
+        k = m.n_samples_templates // 2
+        for i in range(a, b):
+            t = m.spike_times[i]
+            c = m.spike_clusters[i]
+            cg = p.cluster_meta.get('group', c)
+            channel_ids = self.get_best_channels(c)
+            s = int(round(t * sr)) - s0
+            # Skip partial spikes.
+            if s - k < 0 or s + k >= (s1 - s0):
+                continue
+            color = cs.get(c, cluster_ids=p.selected, cluster_group=cg),
+            d = Bunch(data=traces[s - k:s + k, channel_ids],
+                      channel_ids=channel_ids,
+                      start_time=(s + s0 - k) / sr,
+                      cluster_id=c,
+                      color=color,
+                      )
+            out.waveforms.append(d)
+        return out
+
+    def add_trace_view(self, gui):
+        m = self.model
+        v = TraceView(traces=self._get_traces,
+                      n_channels=m.n_channels,
+                      sample_rate=m.sample_rate,
+                      duration=m.duration,
+                      )
+        return self._add_view(gui, v)
+
+    # GUI
+    # -------------------------------------------------------------------------
+
     def create_gui(self, **kwargs):
         gui = GUI(name=self.gui_name,
                   subtitle=self.model.dat_path,
@@ -236,7 +296,8 @@ class TemplateController(EventEmitter):
         self.picker.attach(gui)
 
         self.add_waveform_view(gui)
-        self.add_feature_view(gui)
+        self.add_trace_view(gui)
+        # self.add_feature_view(gui)
 
         return gui
 
