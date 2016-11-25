@@ -14,7 +14,7 @@ import os.path as op
 import click
 import numpy as np
 
-from phy.cluster.picker import ClusterPicker
+from phy.cluster.supervisor import Supervisor
 from phy.cluster.views import (WaveformView,
                                FeatureView,
                                TraceView,
@@ -114,30 +114,30 @@ class TemplateController(EventEmitter):
         self.context = Context(self.cache_dir)
         self.config_dir = config_dir
 
-        self.picker = self._set_picker()
+        self.supervisor = self._set_supervisor()
         self.selector = self._set_selector()
         self.color_selector = ColorSelector()
 
     # Internal methods
     # -------------------------------------------------------------------------
 
-    def _set_picker(self):
+    def _set_supervisor(self):
         # Load the new cluster id.
         new_cluster_id = self.context.load('new_cluster_id'). \
             get('new_cluster_id', None)
         cluster_groups = self.model.metadata['group']
-        picker = ClusterPicker(self.model.spike_clusters,
-                               similarity=self.similarity,
-                               cluster_groups=cluster_groups,
-                               new_cluster_id=new_cluster_id,
-                               )
-        picker.add_column(self.get_best_channel, name='channel')
-        picker.add_column(self.get_probe_depth, name='depth')
-        return picker
+        supervisor = Supervisor(self.model.spike_clusters,
+                                similarity=self.similarity,
+                                cluster_groups=cluster_groups,
+                                new_cluster_id=new_cluster_id,
+                                )
+        supervisor.add_column(self.get_best_channel, name='channel')
+        supervisor.add_column(self.get_probe_depth, name='depth')
+        return supervisor
 
     def _set_selector(self):
         def spikes_per_cluster(cluster_id):
-            return self.picker.clustering.spikes_per_cluster[cluster_id]
+            return self.supervisor.clustering.spikes_per_cluster[cluster_id]
         return Selector(spikes_per_cluster)
 
     def _add_view(self, gui, view):
@@ -151,13 +151,13 @@ class TemplateController(EventEmitter):
     def get_template_counts(self, cluster_id):
         """Return a histogram of the number of spikes in each template for
         a given cluster."""
-        spike_ids = self.picker.clustering.spikes_per_cluster[cluster_id]
+        spike_ids = self.supervisor.clustering.spikes_per_cluster[cluster_id]
         st = self.model.spike_templates[spike_ids]
         return np.bincount(st, minlength=self.model.n_templates)
 
     def get_template_for_cluster(self, cluster_id):
         """Return the template associated to each cluster."""
-        spike_ids = self.picker.clustering.spikes_per_cluster[cluster_id]
+        spike_ids = self.supervisor.clustering.spikes_per_cluster[cluster_id]
         st = self.model.spike_templates[spike_ids]
         template_ids, counts = np.unique(st, return_counts=True)
         ind = np.argmax(counts)
@@ -177,7 +177,8 @@ class TemplateController(EventEmitter):
             temp_j = np.nonzero(self.get_template_counts(cj))[0]
             return np.max(sims[temp_j])
 
-        out = [(cj, _sim_ij(cj)) for cj in self.picker.clustering.cluster_ids]
+        out = [(cj, _sim_ij(cj))
+               for cj in self.supervisor.clustering.cluster_ids]
         return sorted(out, key=itemgetter(1), reverse=True)
 
     def get_best_channel(self, cluster_id):
@@ -242,12 +243,12 @@ class TemplateController(EventEmitter):
                         )
         return self._add_view(gui, v)
 
-    # Features
+    # Traces
     # -------------------------------------------------------------------------
 
     def _get_traces(self, interval):
         m = self.model
-        p = self.picker
+        p = self.supervisor
         cs = self.color_selector
         sr = m.sample_rate
         traces = select_traces(m.traces, interval, sample_rate=sr)
@@ -293,7 +294,7 @@ class TemplateController(EventEmitter):
                   config_dir=self.config_dir,
                   **kwargs)
 
-        self.picker.attach(gui)
+        self.supervisor.attach(gui)
 
         self.add_waveform_view(gui)
         self.add_trace_view(gui)

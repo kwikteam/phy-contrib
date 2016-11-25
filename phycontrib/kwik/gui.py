@@ -94,11 +94,11 @@ class KwikController(object):
                 config_dir=config_dir,
                 )
 
-        @self.picker.actions.add
+        @self.supervisor.actions.add
         def recluster():
             """Relaunch KlustaKwik on the selected clusters."""
             # Selected clusters.
-            cluster_ids = self.picker.selected
+            cluster_ids = self.supervisor.selected
             spike_ids = self.selector.select_spikes(cluster_ids)
             logger.info("Running KlustaKwik on %d spikes.", len(spike_ids))
 
@@ -109,7 +109,7 @@ class KwikController(object):
                                                    num_starting_clusters=10,
                                                    tempdir=tempdir,
                                                    )
-            self.picker.split(spike_ids, spike_clusters)
+            self.supervisor.split(spike_ids, spike_clusters)
 
         # Save.
         @gui.connect_
