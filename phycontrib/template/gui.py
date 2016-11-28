@@ -222,24 +222,33 @@ class TemplateController(EventEmitter):
     # Features
     # -------------------------------------------------------------------------
 
-    def _get_features(self, cluster_id):
-        spike_ids = self.selector.select_spikes([cluster_id],
-                                                self.n_spikes_features,
-                                                )
-        channel_ids = self.get_best_channels(cluster_id)
+    def _get_spike_ids(self, cluster_id=None):
+        nsf = self.n_spikes_features
+        if cluster_id is None:
+            # Background points.
+            ns = self.model.n_spikes
+            return np.arange(0, ns, max(1, ns // nsf))
+        else:
+            return self.selector.select_spikes([cluster_id], nsf)
+
+    def _get_spike_times(self, cluster_id=None):
+        spike_ids = self._get_spike_ids(cluster_id)
+        return Bunch(data=self.model.spike_times[spike_ids],
+                     lim=(0., self.model.duration))
+
+    def _get_features(self, cluster_id=None, channel_ids=None):
+        spike_ids = self._get_spike_ids(cluster_id)
+        if cluster_id is not None:
+            channel_ids = self.get_best_channels(cluster_id)
+        assert channel_ids is not None
         data = self.model.get_features(spike_ids, channel_ids)
         return Bunch(data=data,
-                     spike_ids=spike_ids,
                      channel_ids=channel_ids,
                      )
 
     def add_feature_view(self, gui):
-        nfpc = self.model.n_features_per_channel
         v = FeatureView(features=self._get_features,
-                        spike_times=self.model.spike_times,
-                        n_channels=self.model.n_channels,
-                        n_features_per_channel=nfpc,
-                        best_channels=self.get_best_channels,
+                        attributes={'time': self._get_spike_times}
                         )
         return self._add_view(gui, v)
 
@@ -298,7 +307,7 @@ class TemplateController(EventEmitter):
 
         self.add_waveform_view(gui)
         self.add_trace_view(gui)
-        # self.add_feature_view(gui)
+        self.add_feature_view(gui)
 
         return gui
 
