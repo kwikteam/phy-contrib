@@ -18,14 +18,15 @@ from phy.cluster.supervisor import Supervisor
 from phy.cluster.views import (WaveformView,
                                FeatureView,
                                TraceView,
+                               CorrelogramView,
+                               # ScatterView,
                                select_traces,
-                               # CorrelogramView,
-                               # ScatterView,
                                )
 from phy.gui import create_app, run_app, GUI
 from phy.io.array import (Selector,
                           )
 from phy.io.context import Context
+from phy.stats import correlograms
 from phy.utils import Bunch, IPlugin, EventEmitter
 from phy.utils._color import ColorSelector
 from phy.utils._misc import _read_python
@@ -294,6 +295,28 @@ class TemplateController(EventEmitter):
                       )
         return self._add_view(gui, v)
 
+    # Correlograms
+    # -------------------------------------------------------------------------
+
+    def _get_correlograms(self, cluster_ids, bin_size, window_size):
+        spike_ids = self.selector.select_spikes(cluster_ids, 100000)
+        st = self.model.spike_times[spike_ids]
+        sc = self.supervisor.clustering.spike_clusters[spike_ids]
+        return correlograms(st,
+                            sc,
+                            sample_rate=self.model.sample_rate,
+                            cluster_ids=cluster_ids,
+                            bin_size=bin_size,
+                            window_size=window_size,
+                            )
+
+    def add_correlogram_view(self, gui):
+        m = self.model
+        v = CorrelogramView(correlograms=self._get_correlograms,
+                            sample_rate=m.sample_rate,
+                            )
+        return self._add_view(gui, v)
+
     # GUI
     # -------------------------------------------------------------------------
 
@@ -308,6 +331,7 @@ class TemplateController(EventEmitter):
         self.add_waveform_view(gui)
         self.add_trace_view(gui)
         self.add_feature_view(gui)
+        self.add_correlogram_view(gui)
 
         return gui
 
