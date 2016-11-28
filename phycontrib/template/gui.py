@@ -19,7 +19,7 @@ from phy.cluster.views import (WaveformView,
                                FeatureView,
                                TraceView,
                                CorrelogramView,
-                               # ScatterView,
+                               ScatterView,
                                select_traces,
                                )
 from phy.gui import create_app, run_app, GUI
@@ -106,6 +106,7 @@ class TemplateController(EventEmitter):
     batch_size_waveforms = 10
 
     n_spikes_features = 10000
+    n_spikes_amplitudes = 10000
 
     def __init__(self, dat_path, config_dir=None, **kwargs):
         super(TemplateController, self).__init__()
@@ -317,6 +318,21 @@ class TemplateController(EventEmitter):
                             )
         return self._add_view(gui, v)
 
+    # Amplitudes
+    # -------------------------------------------------------------------------
+
+    def _get_amplitudes(self, cluster_id):
+        n = self.n_spikes_amplitudes
+        spike_ids = self.selector.select_spikes([cluster_id], n)
+        x = self.model.spike_times[spike_ids]
+        y = self.model.amplitudes[spike_ids]
+        return Bunch(x=x, y=y)
+
+    def add_amplitude_view(self, gui):
+        v = ScatterView(coords=self._get_amplitudes,
+                        )
+        return self._add_view(gui, v)
+
     # GUI
     # -------------------------------------------------------------------------
 
@@ -332,6 +348,7 @@ class TemplateController(EventEmitter):
         self.add_trace_view(gui)
         self.add_feature_view(gui)
         self.add_correlogram_view(gui)
+        self.add_amplitude_view(gui)
 
         return gui
 
