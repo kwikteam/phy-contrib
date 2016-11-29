@@ -404,14 +404,21 @@ class TemplateController(EventEmitter):
             # Skip partial spikes.
             if s - k < 0 or s + k >= (s1 - s0):
                 continue
-            color = cs.get(c, cluster_ids=p.selected, cluster_group=cg),
-            d = Bunch(data=traces[s - k:s + k, channel_ids],
-                      channel_ids=channel_ids,
-                      start_time=(s + s0 - k) / sr,
-                      cluster_id=c,
-                      color=color,
-                      )
-            out.waveforms.append(d)
+            color = cs.get(c, cluster_ids=p.selected, cluster_group=cg)
+            # Extract the waveform.
+            wave = Bunch(data=traces[s - k:s + m.n_samples_templates - k,
+                                     channel_ids],
+                         channel_ids=channel_ids,
+                         start_time=(s + s0 - k) / sr,
+                         color=color,
+                         )
+            # Compute the residual: waveform - amplitude * template.
+            residual = wave.copy()
+            template_id = m.spike_templates[i]
+            template = m.get_template(template_id).template[:, channel_ids]
+            amplitude = m.amplitudes[i]
+            residual.data = residual.data - amplitude * template
+            out.waveforms.extend([wave, residual])
         return out
 
     def add_trace_view(self, gui):
