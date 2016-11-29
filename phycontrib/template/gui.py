@@ -261,6 +261,7 @@ class TemplateController(EventEmitter):
 
     def _get_waveforms(self, cluster_id):
         """Return a selection of waveforms for a cluster."""
+        pos = self.model.channel_positions
         spike_ids = self.selector.select_spikes([cluster_id],
                                                 self.n_spikes_waveforms,
                                                 self.batch_size_waveforms,
@@ -270,6 +271,7 @@ class TemplateController(EventEmitter):
         return Bunch(data=data,
                      spike_ids=spike_ids,
                      channel_ids=channel_ids,
+                     channel_positions=pos[channel_ids]
                      )
 
     def _get_template_waveforms(self, cluster_id):
@@ -294,9 +296,6 @@ class TemplateController(EventEmitter):
 
     def add_waveform_view(self, gui):
         v = WaveformView(waveforms=self._get_waveforms,
-                         channel_positions=self.model.channel_positions,
-                         channel_order=self.model.channel_mapping,
-                         best_channels=self.get_best_channels,
                          )
         v = self._add_view(gui, v)
 
