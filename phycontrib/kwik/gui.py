@@ -147,7 +147,7 @@ class KwikGUIPlugin(IPlugin):
         @click.option('--channel-group', type=int)
         @click.option('--clustering', type=str)
         @click.pass_context
-        def cluster_manual(ctx, path, channel_group=None, clustering=None):
+        def gui(ctx, path, channel_group=None, clustering=None):
             """Launch the Kwik GUI on a Kwik file."""
 
             # Create a `phy.log` log file with DEBUG level.

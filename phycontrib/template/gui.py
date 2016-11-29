@@ -440,7 +440,7 @@ class TemplateGUIPlugin(IPlugin):
         @cli.command('template-gui')
         @click.argument('params-path', type=click.Path(exists=True))
         @click.pass_context
-        def cluster_manual(ctx, params_path):
+        def gui(ctx, params_path):
             """Launch the Template GUI on a params.py file."""
 
             # Create a `phy.log` log file with DEBUG level.
@@ -452,3 +452,10 @@ class TemplateGUIPlugin(IPlugin):
             params['dtype'] = np.dtype(params['dtype'])
 
             _run_cmd('_run(params)', ctx, globals(), locals())
+
+        @cli.command('template-describe')
+        @click.argument('params-path', type=click.Path(exists=True))
+        def describe(params_path):
+            """Describe a template dataset."""
+            params = _read_python(params_path)
+            TemplateModel(**params).describe()

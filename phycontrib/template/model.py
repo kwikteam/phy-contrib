@@ -254,7 +254,12 @@ class TemplateModel(object):
             self.duration = self.traces.shape[0] / float(self.sample_rate)
         else:
             self.duration = self.spike_times[-1]
-        assert self.spike_times[-1] <= self.duration
+        if self.spike_times[-1] > self.duration:
+            logger.debug("There are %d/%d spikes after the end of "
+                         "the recording.",
+                         np.sum(self.spike_times > self.duration),
+                         self.n_spikes,
+                         )
 
         f = self._load_features()
         if f is not None:
