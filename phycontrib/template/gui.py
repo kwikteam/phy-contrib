@@ -153,7 +153,7 @@ class TemplateController(EventEmitter):
         # Load the new cluster id.
         new_cluster_id = self.context.load('new_cluster_id'). \
             get('new_cluster_id', None)
-        cluster_groups = self.model.metadata['group']
+        cluster_groups = self.model.get_metadata('group')
         supervisor = Supervisor(self.model.spike_clusters,
                                 similarity=self.similarity,
                                 cluster_groups=cluster_groups,
@@ -410,10 +410,13 @@ class TemplateController(EventEmitter):
 
         self.add_waveform_view(gui)
         self.add_trace_view(gui)
-        self.add_feature_view(gui)
-        self.add_template_feature_view(gui)
+        if self.model.features is not None:
+            self.add_feature_view(gui)
+        if self.model.template_features is not None:
+            self.add_template_feature_view(gui)
         self.add_correlogram_view(gui)
-        self.add_amplitude_view(gui)
+        if self.model.amplitudes is not None:
+            self.add_amplitude_view(gui)
 
         return gui
 
