@@ -431,9 +431,9 @@ class TemplateController(EventEmitter):
         self._add_view(gui, v)
 
         # Jump to the next spike from the first selected cluster.
-        @gui.connect_
+        @self.supervisor.connect
         def on_select(cluster_ids):
-            if len(cluster_ids) == 0:
+            if len(cluster_ids) != 1:
                 return
             spc = self.supervisor.clustering.spikes_per_cluster
             spike_ids = spc[cluster_ids[0]]
