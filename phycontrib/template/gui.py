@@ -142,12 +142,34 @@ class TemplateController(EventEmitter):
         self.context = Context(self.cache_dir)
         self.config_dir = config_dir
 
+        self._set_cache()
         self.supervisor = self._set_supervisor()
         self.selector = self._set_selector()
         self.color_selector = ColorSelector()
 
     # Internal methods
     # -------------------------------------------------------------------------
+
+    def _set_cache(self):
+        memcached = ('get_template_counts',
+                     'get_template_for_cluster',
+                     'similarity',
+                     'get_best_channel',
+                     'get_best_channels',
+                     'get_probe_depth',
+                     )
+        for name in memcached:
+            f = getattr(self, name)
+            setattr(self, name, self.context.memcache(f))
+
+        cached = ('_get_waveforms',
+                  '_get_features',
+                  '_get_template_features',
+                  '_get_amplitudes',
+                  )
+        for name in cached:
+            f = getattr(self, name)
+            setattr(self, name, self.context.cache(f))
 
     def _set_supervisor(self):
         # Load the new cluster id.
@@ -187,7 +209,7 @@ class TemplateController(EventEmitter):
         return np.bincount(st, minlength=self.model.n_templates)
 
     def get_template_for_cluster(self, cluster_id):
-        """Return the template associated to each cluster."""
+        """Return the largest template associated to a cluster."""
         spike_ids = self.supervisor.clustering.spikes_per_cluster[cluster_id]
         st = self.model.spike_templates[spike_ids]
         template_ids, counts = np.unique(st, return_counts=True)
@@ -417,6 +439,11 @@ class TemplateController(EventEmitter):
         self.add_correlogram_view(gui)
         if self.model.amplitudes is not None:
             self.add_amplitude_view(gui)
+
+        # Save the memcache when closing the GUI.
+        @gui.connect_
+        def on_close():
+            self.context.save_memcache()
 
         return gui
 
