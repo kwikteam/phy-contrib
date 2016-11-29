@@ -151,6 +151,8 @@ class TemplateController(EventEmitter):
         self.selector = self._set_selector()
         self.color_selector = ColorSelector()
 
+        self._show_all_spikes = False
+
     # Internal methods
     # -------------------------------------------------------------------------
 
@@ -231,9 +233,9 @@ class TemplateController(EventEmitter):
         def _sim_ij(cj):
             # Templates of the cluster.
             if cj < self.model.n_templates:
-                return sims[cj]
+                return float(sims[cj])
             temp_j = np.nonzero(self.get_template_counts(cj))[0]
-            return np.max(sims[temp_j])
+            return float(np.max(sims[temp_j]))
 
         out = [(cj, _sim_ij(cj))
                for cj in self.supervisor.clustering.cluster_ids]
@@ -378,6 +380,7 @@ class TemplateController(EventEmitter):
     # -------------------------------------------------------------------------
 
     def _get_traces(self, interval):
+        """Get traces and spike waveforms."""
         m = self.model
         p = self.supervisor
         cs = self.color_selector
@@ -391,6 +394,10 @@ class TemplateController(EventEmitter):
         for i in range(a, b):
             t = m.spike_times[i]
             c = m.spike_clusters[i]
+            # Skip non-selected spikes if requested.
+            if (not self._show_all_spikes and
+                    c not in self.supervisor.selected):
+                continue
             cg = p.cluster_meta.get('group', c)
             channel_ids = self.get_best_channels(c)
             s = int(round(t * sr)) - s0
@@ -414,7 +421,15 @@ class TemplateController(EventEmitter):
                       sample_rate=m.sample_rate,
                       duration=m.duration,
                       )
-        return self._add_view(gui, v)
+        self._add_view(gui, v)
+
+        @v.actions.add(shortcut='alt+s')
+        def toggle_highlighted_spikes():
+            """Toggle between showing all spikes or selected spikes."""
+            self._show_all_spikes = not self._show_all_spikes
+            v.set_interval(force_update=True)
+
+        return v
 
     # Correlograms
     # -------------------------------------------------------------------------
