@@ -97,7 +97,7 @@ def subtract_templates(traces,
 
 
 #------------------------------------------------------------------------------
-# Template Controller
+# Special views
 #------------------------------------------------------------------------------
 
 class TemplateFeatureView(ScatterView):
@@ -124,6 +124,10 @@ class TemplateFeatureView(ScatterView):
                              data_bounds=data_bounds,
                              )
 
+
+#------------------------------------------------------------------------------
+# Template Controller
+#------------------------------------------------------------------------------
 
 class TemplateController(EventEmitter):
     gui_name = 'TemplateGUI'
@@ -163,6 +167,7 @@ class TemplateController(EventEmitter):
             setattr(self, name, self.context.memcache(f))
 
         cached = ('_get_waveforms',
+                  '_get_template_waveforms',
                   '_get_features',
                   '_get_template_features',
                   '_get_amplitudes',
@@ -253,6 +258,7 @@ class TemplateController(EventEmitter):
     # -------------------------------------------------------------------------
 
     def _get_waveforms(self, cluster_id):
+        """Return a selection of waveforms for a cluster."""
         spike_ids = self.selector.select_spikes([cluster_id],
                                                 self.n_spikes_waveforms,
                                                 self.batch_size_waveforms,
@@ -264,13 +270,41 @@ class TemplateController(EventEmitter):
                      channel_ids=channel_ids,
                      )
 
+    def _get_template_waveforms(self, cluster_id):
+        """Return the waveforms of the templates corresponding to a cluster."""
+        count = self.get_template_counts(cluster_id)
+        template_ids = np.nonzero(count)[0]
+        count = count[template_ids]
+        # Get local channels.
+        channel_ids = self.get_best_channels(cluster_id)
+        # Get masks.
+        masks = count / float(count.max())
+        masks = np.tile(masks.reshape((-1, 1)), (1, len(channel_ids)))
+        # Get all templates from which this cluster stems from.
+        data = np.stack([self.model.get_template(template_id).template
+                         for template_id in template_ids],
+                        axis=0)
+        return Bunch(data=data[..., channel_ids],
+                     channel_ids=channel_ids,
+                     masks=masks,
+                     alpha=1.,
+                     )
+
     def add_waveform_view(self, gui):
         v = WaveformView(waveforms=self._get_waveforms,
                          channel_positions=self.model.channel_positions,
                          channel_order=self.model.channel_mapping,
                          best_channels=self.get_best_channels,
                          )
-        return self._add_view(gui, v)
+        v = self._add_view(gui, v)
+
+        @v.actions.add(shortcut='w')
+        def toggle_waveforms():
+            f, g = self._get_waveforms, self._get_template_waveforms
+            v.waveforms = f if v.waveforms == g else g
+            v.on_select()
+
+        return v
 
     # Features
     # -------------------------------------------------------------------------
