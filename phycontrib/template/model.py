@@ -492,10 +492,10 @@ class TemplateModel(object):
             features = from_sparse(features, cols, channel_ids)
         return features.astype(np.float64)
 
-    def get_template_features(self, spike_ids, channel_ids):
+    def get_template_features(self, spike_ids):
         """Return sparse template features for given spikes."""
         data = self.template_features
-        _, n_channels_loc = data.shape
+        _, n_templates_loc = data.shape
 
         if self.template_features_rows is not None:
             spike_ids = np.intersect1d(spike_ids, self.features_rows)
@@ -508,8 +508,10 @@ class TemplateModel(object):
         template_features = data[rows]
 
         if self.template_features_cols is not None:
-            assert self.template_features_cols.shape[1] == n_channels_loc
+            assert self.template_features_cols.shape[1] == n_templates_loc
             cols = self.template_features_cols[self.spike_templates[spike_ids]]
             template_features = from_sparse(template_features,
-                                            cols, channel_ids)
+                                            cols,
+                                            np.arange(self.n_templates),
+                                            )
         return template_features.astype(np.float64)

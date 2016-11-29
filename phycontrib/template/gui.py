@@ -7,6 +7,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import inspect
 import logging
 from operator import itemgetter
 import os.path as op
@@ -28,7 +29,7 @@ from phy.io.array import (Selector,
 from phy.io.context import Context
 from phy.stats import correlograms
 from phy.utils import Bunch, IPlugin, EventEmitter
-from phy.utils._color import ColorSelector
+from phy.utils._color import ColorSelector, _colormap
 from phy.utils._misc import _read_python
 from phy.utils.cli import _run_cmd, _add_log_file
 
@@ -99,6 +100,31 @@ def subtract_templates(traces,
 # Template Controller
 #------------------------------------------------------------------------------
 
+class TemplateFeatureView(ScatterView):
+    def on_select(self, cluster_ids=None):
+        super(ScatterView, self).on_select(cluster_ids)
+        cluster_ids = self.cluster_ids
+        n_clusters = len(cluster_ids)
+        if n_clusters != 2:
+            return
+        d = self.coords(cluster_ids)
+
+        # Plot the points.
+        with self.building():
+            for i, cluster_id in enumerate(cluster_ids):
+                x = d.get('x%d' % i)
+                y = d.get('y%d' % i)
+                data_bounds = d.get('data_bounds', 'auto')
+                assert x.ndim == y.ndim == 1
+                assert x.shape == y.shape
+
+                self.scatter(x=x, y=y,
+                             color=tuple(_colormap(i)) + (.5,),
+                             size=self._default_marker_size,
+                             data_bounds=data_bounds,
+                             )
+
+
 class TemplateController(EventEmitter):
     gui_name = 'TemplateGUI'
 
@@ -142,8 +168,11 @@ class TemplateController(EventEmitter):
             return self.supervisor.clustering.spikes_per_cluster[cluster_id]
         return Selector(spikes_per_cluster)
 
-    def _add_view(self, gui, view):
-        view.attach(gui)
+    def _add_view(self, gui, view, name=None):
+        if 'name' in inspect.getargspec(view.attach).args:
+            view.attach(gui, name=name)
+        else:
+            view.attach(gui)
         self.emit('add_view', gui, view)
         return view
 
@@ -254,6 +283,41 @@ class TemplateController(EventEmitter):
                         )
         return self._add_view(gui, v)
 
+    # Template  features
+    # -------------------------------------------------------------------------
+
+    def _get_template_features(self, cluster_ids):
+        assert len(cluster_ids) == 2
+        clu0, clu1 = cluster_ids
+
+        s0 = self._get_spike_ids(clu0)
+        s1 = self._get_spike_ids(clu1)
+
+        n0 = self.get_template_counts(clu0)
+        n1 = self.get_template_counts(clu1)
+
+        t0 = self.model.get_template_features(s0)
+        t1 = self.model.get_template_features(s1)
+
+        x0 = np.average(t0, weights=n0, axis=1)
+        y0 = np.average(t0, weights=n1, axis=1)
+
+        x1 = np.average(t1, weights=n0, axis=1)
+        y1 = np.average(t1, weights=n1, axis=1)
+
+        return Bunch(x0=x0, y0=y0, x1=x1, y1=y1,
+                     data_bounds=(min(x0.min(), x1.min()),
+                                  min(y0.min(), y1.min()),
+                                  max(y0.max(), y1.max()),
+                                  max(y0.max(), y1.max()),
+                                  ),
+                     )
+
+    def add_template_feature_view(self, gui):
+        v = TemplateFeatureView(coords=self._get_template_features,
+                                )
+        return self._add_view(gui, v, name='TemplateFeatureView')
+
     # Traces
     # -------------------------------------------------------------------------
 
@@ -331,7 +395,7 @@ class TemplateController(EventEmitter):
     def add_amplitude_view(self, gui):
         v = ScatterView(coords=self._get_amplitudes,
                         )
-        return self._add_view(gui, v)
+        return self._add_view(gui, v, name='AmplitudeView')
 
     # GUI
     # -------------------------------------------------------------------------
@@ -347,6 +411,7 @@ class TemplateController(EventEmitter):
         self.add_waveform_view(gui)
         self.add_trace_view(gui)
         self.add_feature_view(gui)
+        self.add_template_feature_view(gui)
         self.add_correlogram_view(gui)
         self.add_amplitude_view(gui)
 
