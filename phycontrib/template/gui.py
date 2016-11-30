@@ -29,7 +29,7 @@ from phy.io.array import (Selector,
 from phy.io.context import Context
 from phy.stats import correlograms
 from phy.utils import Bunch, IPlugin, EventEmitter
-from phy.utils._color import ColorSelector, _colormap
+from phy.utils._color import ColorSelector
 from phy.utils._misc import _read_python
 from phy.utils.cli import _run_cmd, _add_log_file
 
@@ -101,28 +101,21 @@ def subtract_templates(traces,
 #------------------------------------------------------------------------------
 
 class TemplateFeatureView(ScatterView):
-    def on_select(self, cluster_ids=None):
-        super(ScatterView, self).on_select(cluster_ids)
-        cluster_ids = self.cluster_ids
-        n_clusters = len(cluster_ids)
-        if n_clusters != 2:
-            return
-        d = self.coords(cluster_ids)
+    def _get_data(self, cluster_ids):
+        if len(cluster_ids) != 2:
+            return []
+        b = self.coords(cluster_ids)
+        return [Bunch(x=b.x0, y=b.y0), Bunch(x=b.x1, y=b.y1)]
 
-        # Plot the points.
-        with self.building():
-            for i, cluster_id in enumerate(cluster_ids):
-                x = d.get('x%d' % i)
-                y = d.get('y%d' % i)
-                data_bounds = d.get('data_bounds', 'auto')
-                assert x.ndim == y.ndim == 1
-                assert x.shape == y.shape
 
-                self.scatter(x=x, y=y,
-                             color=tuple(_colormap(i)) + (.5,),
-                             size=self._default_marker_size,
-                             data_bounds=data_bounds,
-                             )
+class AmplitudeView(ScatterView):
+    def _plot_points(self, bunchs, data_bounds):
+        super(AmplitudeView, self)._plot_points(bunchs, data_bounds)
+        liney = 1.
+        self.lines(pos=[[data_bounds[0], liney, data_bounds[2], liney]],
+                   data_bounds=data_bounds,
+                   color=(1., 1., 1., .5),
+                   )
 
 
 #------------------------------------------------------------------------------
@@ -476,10 +469,11 @@ class TemplateController(EventEmitter):
 
     def _get_amplitudes(self, cluster_id):
         n = self.n_spikes_amplitudes
+        m = self.model
         spike_ids = self.selector.select_spikes([cluster_id], n)
-        x = self.model.spike_times[spike_ids]
-        y = self.model.amplitudes[spike_ids]
-        return Bunch(x=x, y=y)
+        x = m.spike_times[spike_ids]
+        y = m.amplitudes[spike_ids]
+        return Bunch(x=x, y=y, data_bounds=(0., 0., m.duration, y.max()))
 
     def add_amplitude_view(self, gui):
         v = ScatterView(coords=self._get_amplitudes,
