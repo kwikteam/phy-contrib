@@ -269,13 +269,13 @@ class TemplateController(EventEmitter):
         channel_ids = self.get_best_channels(cluster_id)
         data = self.model.get_waveforms(spike_ids, channel_ids)
         return Bunch(data=data,
-                     spike_ids=spike_ids,
                      channel_ids=channel_ids,
                      channel_positions=pos[channel_ids]
                      )
 
     def _get_template_waveforms(self, cluster_id):
         """Return the waveforms of the templates corresponding to a cluster."""
+        pos = self.model.channel_positions
         count = self.get_template_counts(cluster_id)
         template_ids = np.nonzero(count)[0]
         count = count[template_ids]
@@ -290,7 +290,7 @@ class TemplateController(EventEmitter):
                         axis=0)
         return Bunch(data=data[..., channel_ids],
                      channel_ids=channel_ids,
-                     masks=masks,
+                     channel_positions=pos[channel_ids],
                      alpha=1.,
                      )
 
