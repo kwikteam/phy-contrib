@@ -319,9 +319,10 @@ class TemplateController(EventEmitter):
 
     def _get_features(self, cluster_id=None, channel_ids=None):
         spike_ids = self._get_spike_ids(cluster_id)
-        if cluster_id is not None:
+        # Use the best channels only if a cluster is specified and
+        # channels are not specified.
+        if cluster_id is not None and channel_ids is None:
             channel_ids = self.get_best_channels(cluster_id)
-        assert channel_ids is not None
         data = self.model.get_features(spike_ids, channel_ids)
         return Bunch(data=data,
                      channel_ids=channel_ids,
