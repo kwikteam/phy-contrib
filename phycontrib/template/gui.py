@@ -438,12 +438,10 @@ class TemplateController(Controller):
         nsw = self.n_samples_waveforms
         if traces is not None:
             waveforms = WaveformLoader(traces=traces,
-                                       masks=self.all_masks,
                                        spike_samples=spike_samples,
                                        n_samples_waveforms=nsw,
                                        filter_order=filter_order,
                                        sample_rate=self.sample_rate,
-                                       mask_threshold=mask_threshold,
                                        )
         else:
             waveforms = None
