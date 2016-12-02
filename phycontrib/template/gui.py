@@ -427,7 +427,6 @@ class TemplateController(Controller):
             filter_order = None
 
         n_closest_channels = getattr(self, 'max_n_unmasked_channels', 16)
-        mask_threshold = getattr(self, 'waveform_mask_threshold', None)
         self.closest_channels = get_closest_channels(self.channel_positions,
                                                      n_closest_channels,
                                                      )
