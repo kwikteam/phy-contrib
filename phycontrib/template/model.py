@@ -222,6 +222,8 @@ class TemplateModel(object):
             self.templates.shape
         nc = self.n_channels
 
+        self.sparse_templates = self._load_sparse_templates()
+
         self.channel_mapping = self._load_channel_map()
         assert self.channel_mapping.shape == (nc,)
         assert np.all(self.channel_mapping <= self.n_channels_dat - 1)
@@ -405,6 +407,24 @@ class TemplateModel(object):
         wmi = np.linalg.inv(wm)
         self._write_array('whitening_mat_inv', wmi)
         return wmi
+
+    def _load_sparse_templates(self):
+
+        # Sparse structure: regular array with col indices.
+        try:
+            data = self._read_array('sparse_templates')
+            assert data.ndim == 3
+            n_templates, n_samples, n_channels_loc = data.shape
+        except IOError:
+            return
+
+        try:
+            cols = self._read_array('sparse_templates_channels')
+            assert cols.shape == (self.n_templates, n_channels_loc)
+        except IOError:
+            cols = None
+
+        return Bunch(data=data, cols=cols)
 
     def _load_features(self):
 
