@@ -303,28 +303,31 @@ class TemplateController(EventEmitter):
     # Features
     # -------------------------------------------------------------------------
 
-    def _get_spike_ids(self, cluster_id=None):
+    def _get_spike_ids(self, cluster_id=None, load_all=None):
         nsf = self.n_spikes_features
         if cluster_id is None:
             # Background points.
             ns = self.model.n_spikes
             return np.arange(0, ns, max(1, ns // nsf))
         else:
-            return self.selector.select_spikes([cluster_id], nsf)
+            # Load all spikes from the cluster if load_all is True.
+            n = nsf if not load_all else None
+            return self.selector.select_spikes([cluster_id], n)
 
     def _get_spike_times(self, cluster_id=None):
         spike_ids = self._get_spike_ids(cluster_id)
         return Bunch(data=self.model.spike_times[spike_ids],
                      lim=(0., self.model.duration))
 
-    def _get_features(self, cluster_id=None, channel_ids=None):
-        spike_ids = self._get_spike_ids(cluster_id)
+    def _get_features(self, cluster_id=None, channel_ids=None, load_all=None):
+        spike_ids = self._get_spike_ids(cluster_id, load_all=load_all)
         # Use the best channels only if a cluster is specified and
         # channels are not specified.
         if cluster_id is not None and channel_ids is None:
             channel_ids = self.get_best_channels(cluster_id)
         data = self.model.get_features(spike_ids, channel_ids)
         return Bunch(data=data,
+                     spike_ids=spike_ids,
                      channel_ids=channel_ids,
                      )
 
@@ -334,7 +337,7 @@ class TemplateController(EventEmitter):
                         )
         return self._add_view(gui, v)
 
-    # Template  features
+    # Template features
     # -------------------------------------------------------------------------
 
     def _get_template_features(self, cluster_ids):
