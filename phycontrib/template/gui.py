@@ -107,6 +107,10 @@ class TemplateFeatureView(ScatterView):
         b = self.coords(cluster_ids)
         return [Bunch(x=b.x0, y=b.y0), Bunch(x=b.x1, y=b.y1)]
 
+    def attach(self, gui, name=None):
+        super(TemplateFeatureView, self).attach(gui, name=name)
+        gui.unconnect_(self.on_select)
+
 
 class AmplitudeView(ScatterView):
     def _plot_points(self, bunchs, data_bounds):
@@ -372,7 +376,16 @@ class TemplateController(EventEmitter):
     def add_template_feature_view(self, gui):
         v = TemplateFeatureView(coords=self._get_template_features,
                                 )
-        return self._add_view(gui, v, name='TemplateFeatureView')
+        self._add_view(gui, v, name='TemplateFeatureView')
+
+        @v.actions.add(shortcut='f')
+        def update():
+            "Update the view manually for performance reasons."
+            logger.debug("Update the template feature view.")
+            cluster_ids = self.supervisor.selected
+            v.on_select(cluster_ids)
+
+        return v
 
     # Traces
     # -------------------------------------------------------------------------
