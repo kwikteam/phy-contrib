@@ -419,6 +419,19 @@ class TemplateController(EventEmitter):
             out.waveforms.extend([wave, residual])
         return out
 
+    def _jump_to_spike(self, view, delta=+1):
+        """Jump to next or previous spike from the selected clusters."""
+        m = self.model
+        cluster_ids = self.supervisor.selected
+        if len(cluster_ids) == 0:
+            return
+        spc = self.supervisor.clustering.spikes_per_cluster
+        spike_ids = spc[cluster_ids[0]]
+        spike_times = m.spike_times[spike_ids]
+        ind = np.searchsorted(spike_times, view.time)
+        n = len(spike_times)
+        view.go_to(spike_times[(ind + delta) % n])
+
     def add_trace_view(self, gui):
         m = self.model
         v = TraceView(traces=self._get_traces,
@@ -429,17 +442,15 @@ class TemplateController(EventEmitter):
                       )
         self._add_view(gui, v)
 
-        # Jump to the next spike from the first selected cluster.
-        @self.supervisor.connect
-        def on_select(cluster_ids):
-            if len(cluster_ids) != 1:
-                return
-            spc = self.supervisor.clustering.spikes_per_cluster
-            spike_ids = spc[cluster_ids[0]]
-            spike_times = m.spike_times[spike_ids]
-            ind = np.searchsorted(spike_times, v.time)
-            n = len(spike_times)
-            v.go_to(spike_times[min(ind, n - 1)])
+        @v.actions.add(shortcut='alt+pgdown')
+        def go_to_next_spike():
+            """Jump to the next spike from the first selected cluster."""
+            self._jump_to_spike(v, +1)
+
+        @v.actions.add(shortcut='alt+pgup')
+        def go_to_previous_spike():
+            """Jump to the previous spike from the first selected cluster."""
+            self._jump_to_spike(v, -1)
 
         @v.actions.add(shortcut='alt+s')
         def toggle_highlighted_spikes():
