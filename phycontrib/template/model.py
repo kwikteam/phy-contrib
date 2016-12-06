@@ -138,6 +138,7 @@ def from_sparse(data, cols, channel_ids):
     n_spikes, n_channels_loc = shape[:2]
     # Convert column indices to relative indices given the specified
     # channel_ids.
+    # NOTE: we ensure here that `col` contains integers.
     c = cols.flatten().astype(np.int32)
     # Remove columns that do not belong to the specified channels.
     c[~np.in1d(c, channel_ids)] = -1
@@ -330,7 +331,9 @@ class TemplateModel(object):
         save_metadata(path, name, values)
 
     def _load_channel_map(self):
-        return self._read_array('channel_map').astype(np.int32)
+        out = self._read_array('channel_map')
+        assert out.dtype in (np.uint32, np.int32, np.int64)
+        return out
 
     def _load_channel_positions(self):
         return self._read_array('channel_positions')
@@ -354,7 +357,9 @@ class TemplateModel(object):
         return self._read_array('amplitudes')
 
     def _load_spike_templates(self):
-        return self._read_array('spike_templates').astype(np.int32)
+        out = self._read_array('spike_templates')
+        assert out.dtype in (np.uint32, np.int32, np.int64)
+        return out
 
     def _load_spike_clusters(self):
         sc_path = self._get_array_path('spike_clusters')
@@ -363,7 +368,9 @@ class TemplateModel(object):
             st_path = self._get_array_path('spike_templates')
             shutil.copy(st_path, sc_path)
         logger.debug("Loading spike clusters.")
-        return self._read_array('spike_clusters').astype(np.int32)
+        out = self._read_array('spike_clusters')
+        assert out.dtype in (np.uint32, np.int32, np.int64)
+        return out
 
     def _load_spike_samples(self):
         # WARNING: "spike_times.npy" is in units of samples. Need to
@@ -377,13 +384,15 @@ class TemplateModel(object):
         logger.debug("Loading templates.")
         templates = self._read_array('templates')
         # templates[np.isnan(templates)] = 0
-        return templates.astype(np.float64)
+        assert templates.dtype in (np.float32, np.float64)
+        return templates
 
     def _load_templates_unw(self):
         logger.debug("Loading unwhitened templates.")
         templates_unw = self._read_array('templates_unw')
         # templates_unw[np.isnan(templates_unw)] = 0
-        return templates_unw.astype(np.float64)
+        assert templates_unw.dtype in (np.float32, np.float64)
+        return templates_unw
 
     def _compute_templates_unw(self, templates, wmi):
         logger.debug("Couldn't find unwhitened templates, computing them.")
@@ -432,6 +441,7 @@ class TemplateModel(object):
         try:
             data = self._read_array('pc_features').transpose((0, 2, 1))
             assert data.ndim == 3
+            assert data.dtype in (np.float32, np.float64)
             n_spikes, n_channels_loc, n_pcs = data.shape
         except IOError:
             return
@@ -455,6 +465,7 @@ class TemplateModel(object):
         # Sparse structure: regular array with row and col indices.
         try:
             data = self._read_array('template_features')
+            assert data.dtype in (np.float32, np.float64)
             assert data.ndim == 2
             n_spikes, n_channels_loc = data.shape
         except IOError:
@@ -493,8 +504,9 @@ class TemplateModel(object):
         """Return several waveforms on specified channels."""
         if self.waveform_loader is None:
             return
-        return self.waveform_loader.get(spike_ids,
-                                        channel_ids).astype(np.float64)
+        out = self.waveform_loader.get(spike_ids, channel_ids)
+        assert out.dtype in (np.float32, np.float64)
+        return out
 
     def get_features(self, spike_ids, channel_ids):
         """Return sparse features for given spikes."""
@@ -515,7 +527,7 @@ class TemplateModel(object):
             assert self.features_cols.shape[1] == n_channels_loc
             cols = self.features_cols[self.spike_templates[spike_ids]]
             features = from_sparse(features, cols, channel_ids)
-        return features.astype(np.float64)
+        return features
 
     def get_template_features(self, spike_ids):
         """Return sparse template features for given spikes."""
@@ -539,4 +551,4 @@ class TemplateModel(object):
                                             cols,
                                             np.arange(self.n_templates),
                                             )
-        return template_features.astype(np.float64)
+        return template_features
