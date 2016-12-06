@@ -261,6 +261,8 @@ class TemplateController(EventEmitter):
                                                 )
         channel_ids = self.get_best_channels(cluster_id)
         data = self.model.get_waveforms(spike_ids, channel_ids)
+        # Normalize by spike amplitudes.
+        data /= self.model.amplitudes[spike_ids][:, np.newaxis, np.newaxis]
         return Bunch(data=data,
                      channel_ids=channel_ids,
                      channel_positions=pos[channel_ids]
