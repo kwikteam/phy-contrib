@@ -368,8 +368,9 @@ class TemplateModel(object):
             st_path = self._get_array_path('spike_templates')
             shutil.copy(st_path, sc_path)
         logger.debug("Loading spike clusters.")
-        out = self._read_array('spike_clusters')
-        assert out.dtype in (np.uint32, np.int32, np.int64)
+        # NOTE: we make a copy in memory so that we can update this array
+        # during manual clustering.
+        out = self._read_array('spike_clusters').astype(np.int32)
         return out
 
     def _load_spike_samples(self):
