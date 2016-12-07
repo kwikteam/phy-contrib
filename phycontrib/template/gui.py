@@ -205,7 +205,7 @@ class TemplateController(EventEmitter):
                 if cluster_ids is None:
                     cluster_ids = supervisor.selected
                 s = supervisor.clustering.spikes_in_clusters(cluster_ids)
-                supervisor.split(s, self.spike_templates[s])
+                supervisor.split(s, self.model.spike_templates[s])
 
         # Save.
         @supervisor.connect
