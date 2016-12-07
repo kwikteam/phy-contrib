@@ -9,8 +9,7 @@ import shutil
 import numpy as np
 import scipy.io as sio
 
-from phy.io.array import (_get_data_lim,
-                          _concatenate_virtual_arrays,
+from phy.io.array import (_concatenate_virtual_arrays,
                           _index_of,
                           _spikes_in_clusters,
                           )
