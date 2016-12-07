@@ -184,6 +184,7 @@ class TemplateController(EventEmitter):
                                 similarity=self.similarity,
                                 cluster_groups=cluster_groups,
                                 new_cluster_id=new_cluster_id,
+                                context=self.context,
                                 )
         supervisor.add_column(self.get_best_channel, name='channel')
         supervisor.add_column(self.get_probe_depth, name='depth')
@@ -511,7 +512,7 @@ class TemplateController(EventEmitter):
                   config_dir=self.config_dir,
                   **kwargs)
 
-        self.supervisor.attach(gui, context=self.context)
+        self.supervisor.attach(gui)
 
         self.add_waveform_view(gui)
         self.add_trace_view(gui)
