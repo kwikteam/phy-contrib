@@ -302,6 +302,12 @@ class TemplateController(EventEmitter):
                      channel_positions=pos[channel_ids]
                      )
 
+    def _get_mean_waveforms(self, cluster_id):
+        b = self._get_waveforms(cluster_id)
+        b.data = b.data.mean(axis=0)[np.newaxis, ...]
+        b['alpha'] = 1.
+        return b
+
     def _get_template_waveforms(self, cluster_id):
         """Return the waveforms of the templates corresponding to a cluster."""
         pos = self.model.channel_positions
@@ -331,8 +337,14 @@ class TemplateController(EventEmitter):
         v.actions.separator()
 
         @v.actions.add(shortcut='w')
-        def toggle_waveforms():
+        def toggle_templates():
             f, g = self._get_waveforms, self._get_template_waveforms
+            v.waveforms = f if v.waveforms == g else g
+            v.on_select()
+
+        @v.actions.add(shortcut='m')
+        def toggle_mean_waveforms():
+            f, g = self._get_waveforms, self._get_mean_waveforms
             v.waveforms = f if v.waveforms == g else g
             v.on_select()
 
