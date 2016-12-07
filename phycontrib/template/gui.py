@@ -111,8 +111,6 @@ class TemplateFeatureView(ScatterView):
 
 
 class AmplitudeView(ScatterView):
-    _callback_delay = 50
-
     def _plot_points(self, bunchs, data_bounds):
         super(AmplitudeView, self)._plot_points(bunchs, data_bounds)
         liney = 1.
