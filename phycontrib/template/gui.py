@@ -185,10 +185,37 @@ class TemplateController(EventEmitter):
                                 context=self.context,
                                 )
 
+        # Load the non-group metadata from the model to the cluster_meta.
+        for name in self.model.metadata_fields:
+            if name == 'group':
+                continue
+            values = self.model.get_metadata(name)
+            for cluster_id, value in values.items():
+                supervisor.cluster_meta.set(name, [cluster_id], value,
+                                            add_to_stack=False)
+
         @supervisor.connect
         def on_create_cluster_views():
             supervisor.add_column(self.get_best_channel, name='channel')
             supervisor.add_column(self.get_probe_depth, name='depth')
+
+            @supervisor.actions.add(shortcut='shift+ctrl+k')
+            def split_init(cluster_ids=None):
+                """Split a cluster according to the original templates."""
+                if cluster_ids is None:
+                    cluster_ids = supervisor.selected
+                s = supervisor.clustering.spikes_in_clusters(cluster_ids)
+                supervisor.split(s, self.spike_templates[s])
+
+        # Save.
+        @supervisor.connect
+        def on_request_save(spike_clusters, groups, *labels):
+            """Save the modified data."""
+            # Save the clusters.
+            self.model.save_spike_clusters(spike_clusters)
+            # Save cluster metadata.
+            for name, values in labels:
+                self.model.save_metadata(name, values)
 
         return supervisor
 

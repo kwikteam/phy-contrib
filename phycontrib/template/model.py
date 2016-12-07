@@ -324,10 +324,19 @@ class TemplateModel(object):
         return self.metadata.get(name, {})
 
     def save_metadata(self, name, values):
-        """Save a dictionary {cluster_id: value} with cluster metadata."""
+        """Save a dictionary {cluster_id: value} with cluster metadata in
+        a TSV file."""
         path = op.join(self.dir_path, 'cluster_%s.tsv' % name)
-        logger.debug("Save `{}`.".format(path))
-        save_metadata(path, name, values)
+        logger.debug("Save `%s`.", path)
+        # Remove empty values.
+        save_metadata(path, name,
+                      {c: v for c, v in values.items() if v is not None})
+
+    def save_spike_clusters(self, spike_clusters):
+        """Save the spike clusters."""
+        path = self._get_array_path('spike_clusters')
+        logger.debug("Save `%s`.", path)
+        np.save(path, spike_clusters)
 
     def _load_channel_map(self):
         out = self._read_array('channel_map')
