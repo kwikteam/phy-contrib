@@ -346,10 +346,8 @@ class TemplateModel(object):
                                )
         if traces is not None:
             # Find the scaling factor for the traces.
-            scaling = 1. / _get_data_lim(traces[:10000])
             traces = _concatenate_virtual_arrays([traces],
                                                  channel_map,
-                                                 scaling=scaling,
                                                  )
         return traces
 
