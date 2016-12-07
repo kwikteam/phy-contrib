@@ -297,6 +297,8 @@ class TemplateController(EventEmitter):
                          )
         v = self._add_view(gui, v)
 
+        v.actions.separator()
+
         @v.actions.add(shortcut='w')
         def toggle_waveforms():
             f, g = self._get_waveforms, self._get_template_waveforms
@@ -445,6 +447,8 @@ class TemplateController(EventEmitter):
                       )
         self._add_view(gui, v)
 
+        v.actions.separator()
+
         @v.actions.add(shortcut='alt+pgdown')
         def go_to_next_spike():
             """Jump to the next spike from the first selected cluster."""
@@ -454,6 +458,8 @@ class TemplateController(EventEmitter):
         def go_to_previous_spike():
             """Jump to the previous spike from the first selected cluster."""
             self._jump_to_spike(v, -1)
+
+        v.actions.separator()
 
         @v.actions.add(shortcut='alt+s')
         def toggle_highlighted_spikes():
