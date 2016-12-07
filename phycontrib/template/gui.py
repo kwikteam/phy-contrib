@@ -184,8 +184,12 @@ class TemplateController(EventEmitter):
                                 new_cluster_id=new_cluster_id,
                                 context=self.context,
                                 )
-        supervisor.add_column(self.get_best_channel, name='channel')
-        supervisor.add_column(self.get_probe_depth, name='depth')
+
+        @supervisor.connect
+        def on_create_cluster_views():
+            supervisor.add_column(self.get_best_channel, name='channel')
+            supervisor.add_column(self.get_probe_depth, name='depth')
+
         return supervisor
 
     def _set_selector(self):
