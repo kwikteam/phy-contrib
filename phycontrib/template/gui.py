@@ -23,10 +23,11 @@ from phy.cluster.views import (WaveformView,
                                ScatterView,
                                select_traces,
                                )
+from phy.cluster.views.trace import _iter_spike_waveforms
 from phy.gui import create_app, run_app, GUI
 from phy.io.array import (Selector,
                           )
-from phy.io.context import Context
+from phy.io.context import Context, _cache_methods
 from phy.stats import correlograms
 from phy.utils import Bunch, IPlugin, EventEmitter
 from phy.utils._color import ColorSelector
@@ -39,32 +40,7 @@ logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
-# Utils
-#------------------------------------------------------------------------------
-
-def _dat_n_samples(filename, dtype=None, n_channels=None, offset=None):
-    assert dtype is not None
-    item_size = np.dtype(dtype).itemsize
-    offset = offset if offset else 0
-    n_samples = (op.getsize(filename) - offset) // (item_size * n_channels)
-    assert n_samples >= 0
-    return n_samples
-
-
-def _dat_to_traces(dat_path, n_channels=None, dtype=None, offset=None):
-    assert dtype is not None
-    assert n_channels is not None
-    n_samples = _dat_n_samples(dat_path,
-                               n_channels=n_channels,
-                               dtype=dtype,
-                               offset=offset,
-                               )
-    return np.memmap(dat_path, dtype=dtype, shape=(n_samples, n_channels),
-                     offset=offset)
-
-
-#------------------------------------------------------------------------------
-# Template views
+# Utils and views
 #------------------------------------------------------------------------------
 
 def subtract_templates(traces,
@@ -96,10 +72,6 @@ def subtract_templates(traces,
     return traces
 
 
-#------------------------------------------------------------------------------
-# Special views
-#------------------------------------------------------------------------------
-
 class TemplateFeatureView(ScatterView):
     _callback_delay = 500
 
@@ -123,59 +95,6 @@ class AmplitudeView(ScatterView):
 #------------------------------------------------------------------------------
 # Template Controller
 #------------------------------------------------------------------------------
-
-def _cache_methods(obj, memcached, cached):
-    for name in memcached:
-        f = getattr(obj, name)
-        setattr(obj, name, obj.context.memcache(f))
-
-    for name in cached:
-        f = getattr(obj, name)
-        setattr(obj, name, obj.context.cache(f))
-
-
-def _iter_spike_waveforms(interval=None,
-                          traces_interval=None,
-                          model=None,
-                          supervisor=None,
-                          half_width=None,
-                          get_best_channels=None,
-                          show_all_spikes=False,
-                          color_selector=None,
-                          ):
-    m = model
-    p = supervisor
-    cs = color_selector
-    sr = m.sample_rate
-    a, b = m.spike_times.searchsorted(interval)
-    s0, s1 = int(round(interval[0] * sr)), int(round(interval[1] * sr))
-    k = half_width
-    for i in range(a, b):
-        t = m.spike_times[i]
-        c = m.spike_clusters[i]
-        # Skip non-selected spikes if requested.
-        if (not show_all_spikes and c not in supervisor.selected):
-            continue
-        cg = p.cluster_meta.get('group', c)
-        channel_ids = get_best_channels(c)
-        s = int(round(t * sr)) - s0
-        # Skip partial spikes.
-        if s - k < 0 or s + k >= (s1 - s0):
-            continue
-        color = cs.get(c, cluster_ids=p.selected, cluster_group=cg)
-        n = m.n_samples_templates
-        # Extract the waveform.
-        wave = Bunch(data=traces_interval[s - k:s + n - k, channel_ids],
-                     channel_ids=channel_ids,
-                     start_time=(s + s0 - k) / sr,
-                     color=color,
-                     spike_id=i,
-                     spike_time=t,
-                     spike_cluster=c,
-                     cluster_group=cg,
-                     )
-        yield wave
-
 
 class TemplateController(EventEmitter):
     gui_name = 'TemplateGUI'
