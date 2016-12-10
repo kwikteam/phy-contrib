@@ -124,6 +124,59 @@ class AmplitudeView(ScatterView):
 # Template Controller
 #------------------------------------------------------------------------------
 
+def _cache_methods(obj, memcached, cached):
+    for name in memcached:
+        f = getattr(obj, name)
+        setattr(obj, name, obj.context.memcache(f))
+
+    for name in cached:
+        f = getattr(obj, name)
+        setattr(obj, name, obj.context.cache(f))
+
+
+def _iter_spike_waveforms(interval=None,
+                          traces_interval=None,
+                          model=None,
+                          supervisor=None,
+                          half_width=None,
+                          get_best_channels=None,
+                          show_all_spikes=False,
+                          color_selector=None,
+                          ):
+    m = model
+    p = supervisor
+    cs = color_selector
+    sr = m.sample_rate
+    a, b = m.spike_times.searchsorted(interval)
+    s0, s1 = int(round(interval[0] * sr)), int(round(interval[1] * sr))
+    k = half_width
+    for i in range(a, b):
+        t = m.spike_times[i]
+        c = m.spike_clusters[i]
+        # Skip non-selected spikes if requested.
+        if (not show_all_spikes and c not in supervisor.selected):
+            continue
+        cg = p.cluster_meta.get('group', c)
+        channel_ids = get_best_channels(c)
+        s = int(round(t * sr)) - s0
+        # Skip partial spikes.
+        if s - k < 0 or s + k >= (s1 - s0):
+            continue
+        color = cs.get(c, cluster_ids=p.selected, cluster_group=cg)
+        n = m.n_samples_templates
+        # Extract the waveform.
+        wave = Bunch(data=traces_interval[s - k:s + n - k, channel_ids],
+                     channel_ids=channel_ids,
+                     start_time=(s + s0 - k) / sr,
+                     color=color,
+                     spike_id=i,
+                     spike_time=t,
+                     spike_cluster=c,
+                     cluster_group=cg,
+                     )
+        yield wave
+
+
 class TemplateController(EventEmitter):
     gui_name = 'TemplateGUI'
 
@@ -159,19 +212,13 @@ class TemplateController(EventEmitter):
                      'get_best_channels',
                      'get_probe_depth',
                      )
-        for name in memcached:
-            f = getattr(self, name)
-            setattr(self, name, self.context.memcache(f))
-
         cached = ('_get_waveforms',
                   '_get_template_waveforms',
                   '_get_features',
                   '_get_template_features',
                   '_get_amplitudes',
                   )
-        for name in cached:
-            f = getattr(self, name)
-            setattr(self, name, self.context.cache(f))
+        _cache_methods(self, memcached, cached)
 
     def _set_supervisor(self):
         # Load the new cluster id.
@@ -427,44 +474,32 @@ class TemplateController(EventEmitter):
 
     def _get_traces(self, interval):
         """Get traces and spike waveforms."""
+        k = self.model.n_samples_templates // 2
+        gbc = self.get_best_channels
         m = self.model
-        p = self.supervisor
-        cs = self.color_selector
-        sr = m.sample_rate
-        traces = select_traces(m.traces, interval, sample_rate=sr)
-        out = Bunch(data=traces)
-        a, b = m.spike_times.searchsorted(interval)
-        s0, s1 = int(round(interval[0] * sr)), int(round(interval[1] * sr))
+
+        traces_interval = select_traces(m.traces, interval,
+                                        sample_rate=m.sample_rate)
+        out = Bunch(data=traces_interval)
         out.waveforms = []
-        k = m.n_samples_templates // 2
-        for i in range(a, b):
-            t = m.spike_times[i]
-            c = m.spike_clusters[i]
-            # Skip non-selected spikes if requested.
-            if (not self._show_all_spikes and
-                    c not in self.supervisor.selected):
-                continue
-            cg = p.cluster_meta.get('group', c)
-            channel_ids = self.get_best_channels(c)
-            s = int(round(t * sr)) - s0
-            # Skip partial spikes.
-            if s - k < 0 or s + k >= (s1 - s0):
-                continue
-            color = cs.get(c, cluster_ids=p.selected, cluster_group=cg)
-            # Extract the waveform.
-            wave = Bunch(data=traces[s - k:s + m.n_samples_templates - k,
-                                     channel_ids],
-                         channel_ids=channel_ids,
-                         start_time=(s + s0 - k) / sr,
-                         color=color,
-                         )
+
+        for b in _iter_spike_waveforms(interval=interval,
+                                       traces_interval=traces_interval,
+                                       model=self.model,
+                                       supervisor=self.supervisor,
+                                       color_selector=self.color_selector,
+                                       half_width=k,
+                                       get_best_channels=gbc,
+                                       show_all_spikes=self._show_all_spikes,
+                                       ):
+            i = b.spike_id
             # Compute the residual: waveform - amplitude * template.
-            residual = wave.copy()
+            residual = b.copy()
             template_id = m.spike_templates[i]
-            template = m.get_template(template_id).template[:, channel_ids]
+            template = m.get_template(template_id).template[:, b.channel_ids]
             amplitude = m.amplitudes[i]
             residual.data = residual.data - amplitude * template
-            out.waveforms.extend([wave, residual])
+            out.waveforms.extend([b, residual])
         return out
 
     def _jump_to_spike(self, view, delta=+1):
