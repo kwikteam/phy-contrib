@@ -73,7 +73,7 @@ def subtract_templates(traces,
 
 
 class TemplateFeatureView(ScatterView):
-    _callback_delay = 500
+    _callback_delay = 100
 
     def _get_data(self, cluster_ids):
         if len(cluster_ids) != 2:
@@ -292,6 +292,7 @@ class TemplateController(EventEmitter):
         return Bunch(data=data[..., channel_ids],
                      channel_ids=channel_ids,
                      channel_positions=pos[channel_ids],
+                     masks=masks,
                      alpha=1.,
                      )
 
