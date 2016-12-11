@@ -9,6 +9,7 @@
 
 import inspect
 import logging
+from operator import itemgetter
 import os.path as op
 import shutil
 
@@ -113,6 +114,9 @@ class KwikController(EventEmitter):
         @supervisor.connect
         def on_create_cluster_views():
 
+            supervisor.add_column(self.get_best_channel, name='channel')
+            supervisor.add_column(self.get_probe_depth, name='depth')
+
             @supervisor.actions.add
             def recluster():
                 """Relaunch KlustaKwik on the selected clusters."""
@@ -162,6 +166,9 @@ class KwikController(EventEmitter):
         assert mw.ndim == 2
         return get_waveform_amplitude(mm, mw)
 
+    def get_best_channel(self, cluster_id):
+        return self.get_best_channels(cluster_id)[0]
+
     def get_best_channels(self, cluster_id):
         amp = self._get_waveform_amplitude(cluster_id)
         channel_ids = np.argsort(amp)[::-1]
@@ -175,25 +182,20 @@ class KwikController(EventEmitter):
         return self.get_cluster_position(cluster_id)[1]
 
     def similarity(self, cluster_id):
-        assert isinstance(cluster_id, int)
-        # Position of the cluster's best channel.
-        pos0 = self.get_cluster_position(cluster_id)
-        n = len(pos0)
-        assert n in (2, 3)
-        # Positions of all clusters' best channels.
-        clusters = self.supervisor.selected
-        pos = np.vstack([self.get_cluster_position(int(clu))
-                         for clu in clusters])
-        assert pos.shape == (len(clusters), n)
-        # Distance of all clusters to the current cluster.
-        dist = (pos - pos0) ** 2
-        assert dist.shape == (len(clusters), n)
-        dist = np.sum(dist, axis=1) ** .5
-        assert dist.shape == (len(clusters),)
-        # Closest clusters.
-        ind = np.argsort(dist)
-        ind = ind[:self.n_spikes_close_clusters]
-        return [(int(clusters[i]), float(dist[i])) for i in ind]
+        """Return the list of similar clusters to a given cluster."""
+
+        pos_i = self.get_cluster_position(cluster_id)
+        assert len(pos_i) == 2
+
+        def _sim_ij(cj):
+            """Distance between channel position of clusters i and j."""
+            pos_j = self.get_cluster_position(cj)
+            assert len(pos_j) == 2
+            return np.sqrt(np.sum((pos_j - pos_i) ** 2))
+
+        out = [(cj, _sim_ij(cj))
+               for cj in self.supervisor.clustering.cluster_ids]
+        return sorted(out, key=itemgetter(1), reverse=True)
 
     # Waveforms
     # -------------------------------------------------------------------------
