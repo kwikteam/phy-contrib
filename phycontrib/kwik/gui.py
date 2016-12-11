@@ -57,6 +57,10 @@ def _backup(path):
         shutil.copy(path, path_backup)
 
 
+def _get_distance_max(pos):
+    return np.sqrt(np.sum(pos.max(axis=0) - pos.min(axis=0)) ** 2)
+
+
 class KwikController(EventEmitter):
     gui_name = 'KwikGUI'
 
@@ -73,6 +77,7 @@ class KwikController(EventEmitter):
         kwik_path = op.realpath(kwik_path)
         _backup(kwik_path)
         self.model = KwikModel(kwik_path, **kwargs)
+        self.distance_max = _get_distance_max(self.model.channel_positions)
         self.cache_dir = op.join(op.dirname(kwik_path), '.phy')
         self.context = Context(self.cache_dir)
         self.config_dir = config_dir
@@ -191,7 +196,8 @@ class KwikController(EventEmitter):
             """Distance between channel position of clusters i and j."""
             pos_j = self.get_cluster_position(cj)
             assert len(pos_j) == 2
-            return np.sqrt(np.sum((pos_j - pos_i) ** 2))
+            d = np.sqrt(np.sum((pos_j - pos_i) ** 2))
+            return self.distance_max - d
 
         out = [(cj, _sim_ij(cj))
                for cj in self.supervisor.clustering.cluster_ids]
@@ -226,7 +232,7 @@ class KwikController(EventEmitter):
         return Bunch(data=data[..., channel_ids],
                      channel_ids=channel_ids,
                      channel_positions=pos[channel_ids],
-                     masks=masks,
+                     masks=masks[:, channel_ids],
                      )
 
     def _get_mean_waveforms(self, cluster_id):
