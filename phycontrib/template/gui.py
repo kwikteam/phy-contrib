@@ -265,7 +265,7 @@ class TemplateController(EventEmitter):
         data /= self.model.amplitudes[spike_ids][:, np.newaxis, np.newaxis]
         return Bunch(data=data,
                      channel_ids=channel_ids,
-                     channel_positions=pos[channel_ids]
+                     channel_positions=pos[channel_ids],
                      )
 
     def _get_mean_waveforms(self, cluster_id):
@@ -297,6 +297,7 @@ class TemplateController(EventEmitter):
 
     def add_waveform_view(self, gui):
         v = WaveformView(waveforms=self._get_waveforms,
+                         channel_labels=self.model.channel_mapping,
                          )
         v = self._add_view(gui, v)
 
@@ -441,6 +442,7 @@ class TemplateController(EventEmitter):
                       sample_rate=m.sample_rate,
                       duration=m.duration,
                       channel_positions=m.channel_positions,
+                      channel_labels=m.channel_mapping,
                       )
         self._add_view(gui, v)
 
