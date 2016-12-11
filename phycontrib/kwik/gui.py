@@ -242,6 +242,7 @@ class KwikController(EventEmitter):
     def _get_mean_waveforms(self, cluster_id):
         b = self._get_waveforms(cluster_id)
         b.data = np.mean(b.data, axis=0)[np.newaxis, ...]
+        b.masks = np.mean(b.masks, axis=0)[np.newaxis, ...] ** .1
         b['alpha'] = 1.
         return b
 
