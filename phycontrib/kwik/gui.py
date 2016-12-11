@@ -247,7 +247,6 @@ class KwikController(EventEmitter):
 
     def add_waveform_view(self, gui):
         v = WaveformView(waveforms=self._get_waveforms,
-                         channel_labels=self.model.channel_order,
                          )
         v = self._add_view(gui, v)
 
@@ -345,7 +344,6 @@ class KwikController(EventEmitter):
                       n_channels=m.n_channels,
                       sample_rate=m.sample_rate,
                       duration=m.duration,
-                      channel_labels=m.channel_order,
                       channel_positions=m.channel_positions,
                       )
         self._add_view(gui, v)
