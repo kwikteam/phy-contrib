@@ -71,6 +71,7 @@ class KwikController(EventEmitter):
     n_spikes_amplitudes = 10000
 
     n_spikes_close_clusters = 100
+    n_closest_channels = 16
 
     def __init__(self, kwik_path, config_dir=None, **kwargs):
         super(KwikController, self).__init__()
@@ -177,6 +178,8 @@ class KwikController(EventEmitter):
     def get_best_channels(self, cluster_id):
         amp = self._get_waveform_amplitude(cluster_id)
         channel_ids = np.argsort(amp)[::-1]
+        if self.n_closest_channels is not None:
+            return channel_ids[:self.n_closest_channels]
         return channel_ids
 
     def get_cluster_position(self, cluster_id):
@@ -227,8 +230,9 @@ class KwikController(EventEmitter):
         mm = self._get_mean_masks(cluster_id)
         mw = np.mean(data, axis=0)
         amp = get_waveform_amplitude(mm, mw)
-        channel_ids = np.argsort(amp)[::-1]
         masks = self._get_masks(cluster_id)
+        # Find the best channels.
+        channel_ids = np.argsort(amp)[::-1]
         return Bunch(data=data[..., channel_ids],
                      channel_ids=channel_ids,
                      channel_positions=pos[channel_ids],
@@ -243,6 +247,7 @@ class KwikController(EventEmitter):
 
     def add_waveform_view(self, gui):
         v = WaveformView(waveforms=self._get_waveforms,
+                         channel_labels=self.model.channel_order,
                          )
         v = self._add_view(gui, v)
 
@@ -307,7 +312,8 @@ class KwikController(EventEmitter):
         traces_interval = select_traces(m.traces, interval,
                                         sample_rate=m.sample_rate)
         out = Bunch(data=traces_interval)
-        w = list(_iter_spike_waveforms(interval=interval,
+        out.waveforms = []
+        for b in _iter_spike_waveforms(interval=interval,
                                        traces_interval=traces_interval,
                                        model=self.model,
                                        supervisor=self.supervisor,
@@ -315,8 +321,9 @@ class KwikController(EventEmitter):
                                        half_width=k,
                                        get_best_channels=gbc,
                                        show_all_spikes=self._show_all_spikes,
-                                       ))
-        out.waveforms = w
+                                       ):
+            b.channel_labels = m.channel_order[b.channel_ids]
+            out.waveforms.append(b)
         return out
 
     def _jump_to_spike(self, view, delta=+1):
@@ -338,6 +345,7 @@ class KwikController(EventEmitter):
                       n_channels=m.n_channels,
                       sample_rate=m.sample_rate,
                       duration=m.duration,
+                      channel_labels=m.channel_order,
                       channel_positions=m.channel_positions,
                       )
         self._add_view(gui, v)
