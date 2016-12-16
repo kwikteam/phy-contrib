@@ -261,8 +261,6 @@ class TemplateController(EventEmitter):
                                                 )
         channel_ids = self.get_best_channels(cluster_id)
         data = self.model.get_waveforms(spike_ids, channel_ids)
-        # Normalize by spike amplitudes.
-        data /= self.model.amplitudes[spike_ids][:, np.newaxis, np.newaxis]
         return Bunch(data=data,
                      channel_ids=channel_ids,
                      channel_positions=pos[channel_ids],
@@ -285,10 +283,12 @@ class TemplateController(EventEmitter):
         # Get masks.
         masks = count / float(count.max())
         masks = np.tile(masks.reshape((-1, 1)), (1, len(channel_ids)))
+        # Get the mean amplitude for the cluster.
+        mean_amp = self._get_amplitudes(cluster_id).y.mean()
         # Get all templates from which this cluster stems from.
-        data = np.stack([self.model.get_template(template_id).template
-                         for template_id in template_ids],
-                        axis=0)
+        templates = [self.model.get_template(template_id).template * mean_amp
+                     for template_id in template_ids]
+        data = np.stack(templates, axis=0)
         return Bunch(data=data[..., channel_ids],
                      channel_ids=channel_ids,
                      channel_positions=pos[channel_ids],
