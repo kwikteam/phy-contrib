@@ -10,7 +10,7 @@ class SavePromptPlugin(IPlugin):
             @gui.connect_
             def on_close():
                 # Show save prompt if an action was done.
-                if len(controller.manual_clustering._global_history) <= 1:
+                if len(controller.supervisor._global_history) <= 1:
                     return
                 b = _prompt("Do you want to save your modifications "
                             "before quitting?",
@@ -18,7 +18,7 @@ class SavePromptPlugin(IPlugin):
                             title='Save')
                 r = _show_box(b)
                 if r == 'save':
-                    controller.manual_clustering.save()
+                    controller.supervisor.save()
                 elif r == 'cancel':
                     return False
                 elif r == 'close':
