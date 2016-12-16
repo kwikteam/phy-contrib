@@ -471,7 +471,7 @@ class TemplateController(EventEmitter):
     # -------------------------------------------------------------------------
 
     def _get_correlograms(self, cluster_ids, bin_size, window_size):
-        spike_ids = self.selector.select_spikes(cluster_ids, 100000)
+        spike_ids = self.selector.select_spikes(cluster_ids)
         st = self.model.spike_times[spike_ids]
         sc = self.supervisor.clustering.spike_clusters[spike_ids]
         return correlograms(st,
