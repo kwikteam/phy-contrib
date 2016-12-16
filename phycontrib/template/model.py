@@ -492,9 +492,25 @@ class TemplateModel(object):
 
         return Bunch(data=data, cols=cols, rows=rows)
 
-    def get_template(self, template_id):
+    def _get_template_sparse(self, template_id):
+        assert self.sparse_templates
+        data, cols = self.sparse_templates.data, self.sparse_templates.cols
+        template, channels = data[template_id], cols[template_id]
+        assert template.ndim == 2
+        assert template.shape[1] == len(channels)
+        amplitude = template.max(axis=0) - template.min(axis=0)
+        best_channel = np.argmax(amplitude)
+        b = Bunch(template=template,
+                  amplitude=amplitude,
+                  best_channel=best_channel,
+                  channels=channels,
+                  )
+        return b
+
+    def _get_template_dense(self, template_id):
         """Return data for one template."""
         template = self.templates_unw[template_id, ...]
+        assert template.ndim == 2
         amplitude = template.max(axis=0) - template.min(axis=0)
         best_channel = np.argmax(amplitude)
         channels = get_closest_channels(self.channel_positions, best_channel,
@@ -504,8 +520,13 @@ class TemplateModel(object):
                   best_channel=best_channel,
                   channels=channels,
                   )
-
         return b
+
+    def get_template(self, template_id):
+        if self.sparse_templates:
+            return self._get_template_sparse(template_id)
+        else:
+            return self._get_template_dense(template_id)
 
     def get_waveforms(self, spike_ids, channel_ids):
         """Return several waveforms on specified channels."""
