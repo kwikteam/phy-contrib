@@ -132,16 +132,19 @@ def from_sparse(data, cols, channel_ids):
 
     """
     # The axis in the data that contains the channels.
+    if len(channel_ids) != len(np.unique(channel_ids)):
+        raise NotImplementedError("Multiple identical requested channels "
+                                  "in from_sparse().")
     channel_axis = 1
     shape = list(data.shape)
     n_spikes, n_channels_loc = shape[:2]
-    # Convert column indices to relative indices given the specified
-    # channel_ids.
     # NOTE: we ensure here that `col` contains integers.
     c = cols.flatten().astype(np.int32)
     # Remove columns that do not belong to the specified channels.
     c[~np.in1d(c, channel_ids)] = -1
     assert np.all(np.in1d(c, np.r_[channel_ids, -1]))
+    # Convert column indices to relative indices given the specified
+    # channel_ids.
     cols_loc = _index_of(c, np.r_[channel_ids, -1]).reshape(cols.shape)
     assert cols_loc.shape == (n_spikes, n_channels_loc)
     n_channels = len(channel_ids)
