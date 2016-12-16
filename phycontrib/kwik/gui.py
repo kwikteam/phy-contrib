@@ -305,7 +305,7 @@ class KwikController(EventEmitter):
 
     def _get_traces(self, interval):
         """Get traces and spike waveforms."""
-        k = self.model.n_samples_waveforms // 2
+        ns = self.model.n_samples_waveforms
         gbc = self.get_best_channels
         m = self.model
 
@@ -318,7 +318,7 @@ class KwikController(EventEmitter):
                                        model=self.model,
                                        supervisor=self.supervisor,
                                        color_selector=self.color_selector,
-                                       half_width=k,
+                                       n_samples_waveforms=ns,
                                        get_best_channels=gbc,
                                        show_all_spikes=self._show_all_spikes,
                                        ):
