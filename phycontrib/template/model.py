@@ -234,6 +234,8 @@ class TemplateModel(object):
         self.channel_positions = self._load_channel_positions()
         assert self.channel_positions.shape == (nc, 2)
 
+        self.channel_vertical_order = np.argsort(self.channel_positions[:, 1])
+
         self.wm = self._load_wm()
         assert self.wm.shape == (nc, nc)
         try:

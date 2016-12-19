@@ -402,13 +402,18 @@ class TemplateController(EventEmitter):
     def _get_traces(self, interval):
         """Get traces and spike waveforms."""
         k = self.model.n_samples_templates
-        gbc = self.get_best_channels
         m = self.model
+        c = m.channel_vertical_order
 
         traces_interval = select_traces(m.traces, interval,
                                         sample_rate=m.sample_rate)
+        # Reorder vertically.
+        traces_interval = traces_interval[:, c]
         out = Bunch(data=traces_interval)
         out.waveforms = []
+
+        def gbc(cluster_id):
+            return c[self.get_best_channels(cluster_id)]
 
         for b in _iter_spike_waveforms(interval=interval,
                                        traces_interval=traces_interval,
@@ -448,7 +453,6 @@ class TemplateController(EventEmitter):
                       n_channels=m.n_channels,
                       sample_rate=m.sample_rate,
                       duration=m.duration,
-                      channel_positions=m.channel_positions,
                       )
         self._add_view(gui, v)
 
