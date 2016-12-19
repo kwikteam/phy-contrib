@@ -105,6 +105,7 @@ class TemplateController(EventEmitter):
 
     n_spikes_features = 10000
     n_spikes_amplitudes = 10000
+    n_spikes_correlograms = 100000
 
     def __init__(self, dat_path, config_dir=None, **kwargs):
         super(TemplateController, self).__init__()
@@ -140,6 +141,7 @@ class TemplateController(EventEmitter):
                   '_get_features',
                   '_get_template_features',
                   '_get_amplitudes',
+                  '_get_correlograms',
                   )
         _cache_methods(self, memcached, cached)
 
@@ -236,7 +238,8 @@ class TemplateController(EventEmitter):
 
         out = [(cj, _sim_ij(cj))
                for cj in self.supervisor.clustering.cluster_ids]
-        return sorted(out, key=itemgetter(1), reverse=True)
+        # NOTE: hard-limit to 100 for performance reasons.
+        return sorted(out, key=itemgetter(1), reverse=True)[:100]
 
     def get_best_channel(self, cluster_id):
         """Return the best channel of a given cluster."""
@@ -475,7 +478,10 @@ class TemplateController(EventEmitter):
     # -------------------------------------------------------------------------
 
     def _get_correlograms(self, cluster_ids, bin_size, window_size):
-        spike_ids = self.selector.select_spikes(cluster_ids)
+        spike_ids = self.selector.select_spikes(cluster_ids,
+                                                self.n_spikes_correlograms,
+                                                subset='random',
+                                                )
         st = self.model.spike_times[spike_ids]
         sc = self.supervisor.clustering.spike_clusters[spike_ids]
         return correlograms(st,
