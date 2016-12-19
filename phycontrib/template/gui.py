@@ -34,7 +34,7 @@ from phy.utils._color import ColorSelector
 from phy.utils._misc import _read_python
 from phy.utils.cli import _run_cmd, _add_log_file
 
-from .model import TemplateModel
+from .model import TemplateModel, from_sparse
 from ..utils import attach_plugins
 
 logger = logging.getLogger(__name__)
@@ -249,7 +249,7 @@ class TemplateController(EventEmitter):
     def get_best_channels(self, cluster_id):
         """Return the best channels of a given cluster."""
         template_id = self.get_template_for_cluster(cluster_id)
-        return self.model.get_template(template_id).channels
+        return self.model.get_template(template_id).channel_ids
 
     def get_probe_depth(self, cluster_id):
         """Return the depth of a cluster."""
@@ -293,10 +293,12 @@ class TemplateController(EventEmitter):
         # Get the mean amplitude for the cluster.
         mean_amp = self._get_amplitudes(cluster_id).y.mean()
         # Get all templates from which this cluster stems from.
-        templates = [self.model.get_template(template_id).template * mean_amp
+        templates = [self.model.get_template(template_id)
                      for template_id in template_ids]
-        data = np.stack(templates, axis=0)
-        return Bunch(data=data[..., channel_ids],
+        data = np.stack([b.template * mean_amp for b in templates], axis=0)
+        cols = np.stack([b.channel_ids for b in templates], axis=0)
+        waveforms = from_sparse(data, cols, channel_ids)
+        return Bunch(data=waveforms,
                      channel_ids=channel_ids,
                      channel_positions=pos[channel_ids],
                      masks=masks,

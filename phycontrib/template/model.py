@@ -165,6 +165,8 @@ def from_sparse(data, cols, channel_ids):
 
 
 class TemplateModel(object):
+    n_closest_channels = 16
+
     def __init__(self, dat_path=None, **kwargs):
         dat_path = dat_path or ''
         dir_path = (op.dirname(op.realpath(op.expanduser(dat_path)))
@@ -179,9 +181,6 @@ class TemplateModel(object):
         self.offset = getattr(self, 'offset', 0)
 
         self.filter_order = None if getattr(self, 'hp_filtered', False) else 3
-        self.n_closest_channels = getattr(self, 'max_n_unmasked_channels', 16)
-        self.mask_threshold = getattr(self, 'waveform_mask_threshold', None)
-        self.max_n_waveforms = getattr(self, 'max_n_waveforms', 100)
 
         self._load_data()
         self.waveform_loader = self._create_waveform_loader()
@@ -197,7 +196,6 @@ class TemplateModel(object):
         _print('Duration', '{:.1f}s'.format(self.duration))
         _print('Number of spikes', self.n_spikes)
         _print('Number of templates', self.n_templates)
-        _print('Closest channels', self.n_closest_channels)
         _print('Features shape',
                'None' if self.features is None else str(self.features.shape))
 
@@ -500,15 +498,15 @@ class TemplateModel(object):
     def _get_template_sparse(self, template_id):
         assert self.sparse_templates
         data, cols = self.sparse_templates.data, self.sparse_templates.cols
-        template, channels = data[template_id], cols[template_id]
+        template, channel_ids = data[template_id], cols[template_id]
         assert template.ndim == 2
-        assert template.shape[1] == len(channels)
+        assert template.shape[1] == len(channel_ids)
         amplitude = template.max(axis=0) - template.min(axis=0)
         best_channel = np.argmax(amplitude)
         b = Bunch(template=template,
                   amplitude=amplitude,
                   best_channel=best_channel,
-                  channels=channels,
+                  channel_ids=channel_ids,
                   )
         return b
 
@@ -518,12 +516,13 @@ class TemplateModel(object):
         assert template.ndim == 2
         amplitude = template.max(axis=0) - template.min(axis=0)
         best_channel = np.argmax(amplitude)
-        channels = get_closest_channels(self.channel_positions, best_channel,
-                                        self.n_closest_channels)
+        channel_ids = get_closest_channels(self.channel_positions,
+                                           best_channel,
+                                           self.n_closest_channels)
         b = Bunch(template=template,
                   amplitude=amplitude,
                   best_channel=best_channel,
-                  channels=channels,
+                  channel_ids=channel_ids,
                   )
         return b
 

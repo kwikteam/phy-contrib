@@ -101,14 +101,14 @@ def test_model_1(template_model):
 def test_model_2(template_model):
     m = template_model
     tmp = m.get_template(3)
-    channels = tmp.channels
+    channel_ids = tmp.channel_ids
     spike_ids = m.spikes_in_template(3)
 
-    w = m.get_waveforms(spike_ids, channels)
-    assert w.shape == (len(spike_ids), tmp.template.shape[0], len(channels))
+    w = m.get_waveforms(spike_ids, channel_ids)
+    assert w.shape == (len(spike_ids), tmp.template.shape[0], len(channel_ids))
 
-    f = m.get_features(spike_ids, channels)
-    assert f.shape == (len(spike_ids), len(channels), 3)
+    f = m.get_features(spike_ids, channel_ids)
+    assert f.shape == (len(spike_ids), len(channel_ids), 3)
 
     tf = m.get_template_features(spike_ids)
     assert tf.shape == (len(spike_ids), m.n_templates)
