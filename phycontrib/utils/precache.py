@@ -7,19 +7,21 @@ from phy import IPlugin
 
 class PrecachePlugin(IPlugin):
     def attach_to_controller(self, controller):
+        # Skip if the cache has already been created.
+        if op.exists(op.join(controller.cache_dir, 'done')):
+            return
+
+        s = controller.supervisor
+
         @controller.connect
-        def on_init():
-            # Skip if the cache has already been created.
-            if op.exists(op.join(controller.cache_dir, 'done')):
-                return
+        def on_gui_ready(gui):
             # Create the cache.
-            for clu in tqdm(controller.cluster_ids.tolist(),
+            for clu in tqdm(s.clustering.cluster_ids.tolist(),
                             desc="Precaching data",
                             leave=True,
                             ):
-                controller.get_features(clu)
-                controller.get_waveforms(clu)
-                controller.get_close_clusters(clu)
+                s.select([clu])
+            s.select([])
             # Mark the cache as complete.
             with open(op.join(controller.cache_dir, 'done'), 'w') as f:
                 f.write('')

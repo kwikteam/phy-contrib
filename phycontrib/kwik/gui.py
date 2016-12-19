@@ -35,6 +35,8 @@ from phy.utils._color import ColorSelector
 from phy.utils.cli import _run_cmd, _add_log_file
 from phy.utils.tempdir import TemporaryDirectory
 
+from ..utils import attach_plugins
+
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +91,9 @@ class KwikController(EventEmitter):
         self.color_selector = ColorSelector()
 
         self._show_all_spikes = False
+
+        attach_plugins(self, plugins=kwargs.get('plugins', None),
+                       config_dir=config_dir)
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -413,6 +418,8 @@ class KwikController(EventEmitter):
         @gui.connect_
         def on_close():
             self.context.save_memcache()
+
+        self.emit('gui_ready', gui)
 
         return gui
 
