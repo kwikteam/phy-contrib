@@ -80,6 +80,8 @@ class KwikController(EventEmitter):
         kwik_path = op.realpath(kwik_path)
         _backup(kwik_path)
         self.model = KwikModel(kwik_path, **kwargs)
+        m = self.model
+        self.channel_vertical_order = np.argsort(m.channel_positions[:, 1])
         self.distance_max = _get_distance_max(self.model.channel_positions)
         self.cache_dir = op.join(op.dirname(kwik_path), '.phy')
         self.context = Context(self.cache_dir)
@@ -311,11 +313,17 @@ class KwikController(EventEmitter):
     def _get_traces(self, interval):
         """Get traces and spike waveforms."""
         ns = self.model.n_samples_waveforms
-        gbc = self.get_best_channels
         m = self.model
+        c = self.channel_vertical_order
 
         traces_interval = select_traces(m.traces, interval,
                                         sample_rate=m.sample_rate)
+        # Reorder vertically.
+        traces_interval = traces_interval[:, c]
+
+        def gbc(cluster_id):
+            return c[self.get_best_channels(cluster_id)]
+
         out = Bunch(data=traces_interval)
         out.waveforms = []
         for b in _iter_spike_waveforms(interval=interval,
@@ -350,7 +358,6 @@ class KwikController(EventEmitter):
                       n_channels=m.n_channels,
                       sample_rate=m.sample_rate,
                       duration=m.duration,
-                      channel_positions=m.channel_positions,
                       )
         self._add_view(gui, v)
 
