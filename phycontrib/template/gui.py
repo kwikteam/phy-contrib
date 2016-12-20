@@ -455,6 +455,7 @@ class TemplateController(EventEmitter):
                       n_channels=m.n_channels,
                       sample_rate=m.sample_rate,
                       duration=m.duration,
+                      channel_labels=self.model.channel_vertical_order,
                       )
         self._add_view(gui, v)
 

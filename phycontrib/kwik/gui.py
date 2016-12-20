@@ -183,10 +183,9 @@ class KwikController(EventEmitter):
         return self.get_best_channels(cluster_id)[0]
 
     def get_best_channels(self, cluster_id):
-        amp = self._get_waveform_amplitude(cluster_id)
-        channel_ids = np.argsort(amp)[::-1]
-        if self.n_closest_channels is not None:
-            return channel_ids[:self.n_closest_channels]
+        mm = self._get_mean_masks(cluster_id)
+        channel_ids = np.argsort(mm)[::-1]
+        channel_ids = channel_ids[mm[channel_ids] > .1]
         return channel_ids
 
     def get_cluster_position(self, cluster_id):
@@ -358,6 +357,7 @@ class KwikController(EventEmitter):
                       n_channels=m.n_channels,
                       sample_rate=m.sample_rate,
                       duration=m.duration,
+                      channel_labels=self.channel_vertical_order,
                       )
         self._add_view(gui, v)
 
