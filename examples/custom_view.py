@@ -33,7 +33,7 @@ class CustomView(IPlugin):
             # We connect this function to the "select" event triggered
             # by the controller at every cluster selection change.
             @c.connect
-            def on_select(clusters):
+            def on_select(clusters, **kwargs):
                 # We clear the figure.
                 ax.clear()
 
