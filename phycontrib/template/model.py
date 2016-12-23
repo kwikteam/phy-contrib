@@ -137,6 +137,9 @@ def from_sparse(data, cols, channel_ids):
                                   "in from_sparse().")
     channel_axis = 1
     shape = list(data.shape)
+    assert data.ndim >= 2
+    assert cols.ndim == 2
+    assert data.shape[:2] == cols.shape
     n_spikes, n_channels_loc = shape[:2]
     # NOTE: we ensure here that `col` contains integers.
     c = cols.flatten().astype(np.int32)
@@ -519,6 +522,9 @@ class TemplateModel(object):
         channel_ids = get_closest_channels(self.channel_positions,
                                            best_channel,
                                            self.n_closest_channels)
+        template = template[:, channel_ids]
+        assert template.ndim == 2
+        assert template.shape[1] == channel_ids.shape[0]
         b = Bunch(template=template,
                   amplitude=amplitude,
                   best_channel=best_channel,
