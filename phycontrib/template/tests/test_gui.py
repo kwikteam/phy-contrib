@@ -29,5 +29,11 @@ def controller(tempdir, template_model):
 
 def test_gui_1(qtbot, controller):
     gui = controller.create_gui()
+    s = controller.supervisor
     gui.show()
+    qtbot.waitForWindowShown(gui)
+    s.next()
+    w = gui.list_views('WaveformView')[0]
+    w.actions.toggle_templates()
+    w.actions.toggle_mean_waveforms()
     # qtbot.stop()
