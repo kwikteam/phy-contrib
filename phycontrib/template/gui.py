@@ -301,6 +301,7 @@ class TemplateController(EventEmitter):
                      for template_id in template_ids]
         data = np.stack([b.template * mean_amp for b in templates], axis=0)
         cols = np.stack([b.channel_ids for b in templates], axis=0)
+        assert data.shape[1] == cols.shape[1]
         waveforms = from_sparse(data, cols, channel_ids)
         return Bunch(data=waveforms,
                      channel_ids=channel_ids,
