@@ -28,7 +28,9 @@ logger = logging.getLogger(__name__)
 @fixture
 def controller(tempdir, template_model):
     _copy_gui_state('TemplateGUI', 'template', config_dir=tempdir)
-    c = TemplateController(model=template_model, config_dir=tempdir)
+    plugins = ['PrecachePlugin', 'SavePrompt']
+    c = TemplateController(model=template_model, config_dir=tempdir,
+                           plugins=plugins)
     return c
 
 
