@@ -7,7 +7,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import inspect
 import logging
 from operator import itemgetter
 import os.path as op
@@ -146,7 +145,7 @@ class KwikController(EventEmitter):
                                                        num_starting_clusters=n,
                                                        tempdir=tempdir,
                                                        )
-                self.manual_clustering.split(spike_ids, spike_clusters)
+                self.supervisor.split(spike_ids, spike_clusters)
 
         # Save.
         @supervisor.connect
@@ -162,22 +161,13 @@ class KwikController(EventEmitter):
             return self.supervisor.clustering.spikes_per_cluster[cluster_id]
         return Selector(spikes_per_cluster)
 
-    def _add_view(self, gui, view, name=None):
-        if 'name' in inspect.getargspec(view.attach).args:
-            view.attach(gui, name=name)
-        else:
-            view.attach(gui)
+    def _add_view(self, gui, view):
+        view.attach(gui)
         self.emit('add_view', gui, view)
         return view
 
     # Model methods
     # -------------------------------------------------------------------------
-
-    def _get_waveform_amplitude(self, cluster_id):
-        mm = self._get_mean_masks(cluster_id)
-        mw = self._get_mean_waveforms(cluster_id).data[0]
-        assert mw.ndim == 2
-        return get_waveform_amplitude(mm, mw)
 
     def get_best_channel(self, cluster_id):
         return self.get_best_channels(cluster_id)[0]
@@ -246,7 +236,7 @@ class KwikController(EventEmitter):
                      )
 
     def _get_mean_waveforms(self, cluster_id):
-        b = self._get_waveforms(cluster_id)
+        b = self._get_waveforms(cluster_id).copy()
         b.data = np.mean(b.data, axis=0)[np.newaxis, ...]
         b.masks = np.mean(b.masks, axis=0)[np.newaxis, ...] ** .1
         b['alpha'] = 1.
@@ -435,7 +425,7 @@ class KwikController(EventEmitter):
 # Kwik GUI plugin
 #------------------------------------------------------------------------------
 
-def _run(path, channel_group, clustering):
+def _run(path, channel_group, clustering):  # pragma: no cover
     controller = KwikController(path,
                                 channel_group=channel_group,
                                 clustering=clustering,
@@ -453,7 +443,7 @@ class KwikGUIPlugin(IPlugin):
     def attach_to_cli(self, cli):
 
         # Create the `phy cluster-manual file.kwik` command.
-        @cli.command('kwik-gui')
+        @cli.command('kwik-gui')  # pragma: no cover
         @click.argument('path', type=click.Path(exists=True))
         @click.option('--channel-group', type=int)
         @click.option('--clustering', type=str)
