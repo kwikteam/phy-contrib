@@ -31,9 +31,9 @@ class CustomView(IPlugin):
             gui.add_view(f, name='ISI')
 
             # We connect this function to the "select" event triggered
-            # by the GUI at every cluster selection change.
-            @gui.connect_
-            def on_select(clusters):
+            # by the controller at every cluster selection change.
+            @c.connect
+            def on_select(clusters, **kwargs):
                 # We clear the figure.
                 ax.clear()
 

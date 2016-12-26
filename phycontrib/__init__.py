@@ -12,7 +12,7 @@ import os
 import os.path as op
 import shutil
 
-from .kwik_gui import KwikGUIPlugin, KwikController  # noqa
+from .kwik import KwikGUIPlugin, KwikController  # noqa
 from .template import TemplateGUIPlugin, TemplateController  # noqa
 from . import utils  # noqa
 
@@ -26,10 +26,10 @@ logger = logging.getLogger(__name__)
 __version__ = '1.0.15'
 
 
-def _copy_gui_state(gui_name, module_name):
+def _copy_gui_state(gui_name, module_name, config_dir=None):
     """Copy the state.json file."""
-    home = op.realpath(op.expanduser('~'))
-    gui_dir = op.join(home, '.phy', gui_name)
+    config_dir = config_dir or op.join(op.realpath(op.expanduser('~')), '.phy')
+    gui_dir = op.join(config_dir, gui_name)
     if not op.exists(gui_dir):
         os.makedirs(gui_dir)
     # Create the script if it doesn't already exist.
@@ -43,7 +43,7 @@ def _copy_gui_state(gui_name, module_name):
 
 
 def _copy_all_gui_states():
-    _copy_gui_state('KwikGUI', 'kwik_gui')
+    _copy_gui_state('KwikGUI', 'kwik')
     _copy_gui_state('TemplateGUI', 'template')
 
 
