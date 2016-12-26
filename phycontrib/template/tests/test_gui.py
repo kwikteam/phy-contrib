@@ -9,17 +9,20 @@
 import logging
 import os.path as op
 
+from click.testing import CliRunner
 from pytest import fixture
 
+from phy.utils.cli import phy
+from phy.gui.qt import Qt
 from phy.utils._misc import _read_python
-from ..gui import TemplateController
+from ..gui import TemplateController, TemplateGUIPlugin
 from phycontrib import _copy_gui_state
 
 logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
-# Tests
+# Fixtures
 #------------------------------------------------------------------------------
 
 @fixture
@@ -27,6 +30,25 @@ def controller(tempdir, template_model):
     _copy_gui_state('TemplateGUI', 'template', config_dir=tempdir)
     c = TemplateController(model=template_model, config_dir=tempdir)
     return c
+
+
+@fixture
+def runner():
+    runner = CliRunner()
+    TemplateGUIPlugin().attach_to_cli(phy)
+    return runner
+
+
+#------------------------------------------------------------------------------
+# Tests
+#------------------------------------------------------------------------------
+
+def test_template_describe(runner, tempdir, controller):
+    path = op.join(tempdir, 'params.py')
+    res = runner.invoke(phy, ['template-describe', path])
+    res.exit_code == 0
+    print(res.output)
+    # assert 'main*' in res.output
 
 
 def test_gui_1(qtbot, tempdir, controller):
@@ -88,4 +110,25 @@ def test_gui_1(qtbot, tempdir, controller):
     for clu in clu_to_merge:
         assert clu not in s.clustering.cluster_ids
     assert clu_merged in s.clustering.cluster_ids
+    gui.close()
+
+
+def test_template_gui_2(qtbot, controller):
+    gui = controller.create_gui()
+    qtbot.addWidget(gui)
+    gui.show()
+    qtbot.waitForWindowShown(gui)
+
+    qtbot.keyPress(gui, Qt.Key_Down)
+    qtbot.keyPress(gui, Qt.Key_Down)
+    qtbot.keyPress(gui, Qt.Key_Space)
+    qtbot.keyPress(gui, Qt.Key_G)
+    qtbot.keyPress(gui, Qt.Key_Space)
+    qtbot.keyPress(gui, Qt.Key_G, modifier=Qt.AltModifier)
+    qtbot.keyPress(gui, Qt.Key_Z)
+    qtbot.keyPress(gui, Qt.Key_N, modifier=Qt.AltModifier)
+    qtbot.keyPress(gui, Qt.Key_Space)
+    qtbot.keyPress(gui, Qt.Key_Enter)
+    qtbot.keyPress(gui, Qt.Key_S, modifier=Qt.ControlModifier)
+
     gui.close()

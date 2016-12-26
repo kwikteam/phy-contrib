@@ -7,7 +7,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import inspect
 import logging
 from operator import itemgetter
 import os.path as op
@@ -171,11 +170,8 @@ class TemplateController(EventEmitter):
             return self.supervisor.clustering.spikes_per_cluster[cluster_id]
         return Selector(spikes_per_cluster)
 
-    def _add_view(self, gui, view, name=None):
-        if 'name' in inspect.getargspec(view.attach).args:
-            view.attach(gui, name=name)
-        else:
-            view.attach(gui)
+    def _add_view(self, gui, view):
+        view.attach(gui)
         self.emit('add_view', gui, view)
         return view
 
@@ -378,7 +374,7 @@ class TemplateController(EventEmitter):
     def add_template_feature_view(self, gui):
         v = TemplateFeatureView(coords=self._get_template_features,
                                 )
-        return self._add_view(gui, v, name='TemplateFeatureView')
+        return self._add_view(gui, v)
 
     # Traces
     # -------------------------------------------------------------------------
@@ -502,7 +498,7 @@ class TemplateController(EventEmitter):
     def add_amplitude_view(self, gui):
         v = AmplitudeView(coords=self._get_amplitudes,
                           )
-        return self._add_view(gui, v, name='AmplitudeView')
+        return self._add_view(gui, v)
 
     # GUI
     # -------------------------------------------------------------------------
@@ -548,13 +544,13 @@ def _run(params):  # pragma: no cover
     del gui
 
 
-class TemplateGUIPlugin(IPlugin):  # pragma: no cover
+class TemplateGUIPlugin(IPlugin):
     """Create the `phy template-gui` command for Kwik files."""
 
     def attach_to_cli(self, cli):
 
         # Create the `phy cluster-manual file.kwik` command.
-        @cli.command('template-gui')
+        @cli.command('template-gui')  # pragma: no cover
         @click.argument('params-path', type=click.Path(exists=True))
         @click.pass_context
         def gui(ctx, params_path):
