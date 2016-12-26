@@ -44,35 +44,6 @@ logger = logging.getLogger(__name__)
 # Utils and views
 #------------------------------------------------------------------------------
 
-def subtract_templates(traces,
-                       start=None,
-                       spike_times=None,
-                       spike_clusters=None,
-                       amplitudes=None,
-                       spike_templates=None,
-                       sample_rate=None,
-                       ):
-    traces = traces.copy()
-    st = spike_times
-    w = spike_templates
-    n_spikes, n_samples_t, n_channels = w.shape
-    n = traces.shape[0]
-    for index in range(w.shape[0]):
-        t = int(round((st[index] - start) * sample_rate))
-        i, j = n_samples_t // 2, n_samples_t // 2 + (n_samples_t % 2)
-        assert i + j == n_samples_t
-        x = w[index] * amplitudes[index]  # (n_samples, n_channels)
-        sa, sb = t - i, t + j
-        if sa < 0:
-            x = x[-sa:, :]
-            sa = 0
-        elif sb > n:
-            x = x[:-(sb - n), :]
-            sb = n
-        traces[sa:sb, :] -= x
-    return traces
-
-
 class TemplateFeatureView(ScatterView):
     _callback_delay = 100
 
@@ -441,7 +412,7 @@ class TemplateController(EventEmitter):
             # Compute the residual: waveform - amplitude * template.
             residual = b.copy()
             template_id = m.spike_templates[i]
-            template = m.get_template(template_id).template[:, b.channel_ids]
+            template = m.get_template(template_id).template
             amplitude = m.amplitudes[i]
             residual.data = residual.data - amplitude * template
             out.waveforms.extend([b, residual])
@@ -529,8 +500,8 @@ class TemplateController(EventEmitter):
         return Bunch(x=x, y=y, data_bounds=(0., 0., m.duration, y.max()))
 
     def add_amplitude_view(self, gui):
-        v = ScatterView(coords=self._get_amplitudes,
-                        )
+        v = AmplitudeView(coords=self._get_amplitudes,
+                          )
         return self._add_view(gui, v, name='AmplitudeView')
 
     # GUI
@@ -568,7 +539,7 @@ class TemplateController(EventEmitter):
 # Template GUI plugin
 #------------------------------------------------------------------------------
 
-def _run(params):
+def _run(params):  # pragma: no cover
     controller = TemplateController(**params)
     gui = controller.create_gui()
     gui.show()
@@ -577,7 +548,7 @@ def _run(params):
     del gui
 
 
-class TemplateGUIPlugin(IPlugin):
+class TemplateGUIPlugin(IPlugin):  # pragma: no cover
     """Create the `phy template-gui` command for Kwik files."""
 
     def attach_to_cli(self, cli):
