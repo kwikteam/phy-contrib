@@ -284,7 +284,9 @@ class TemplateController(EventEmitter):
                      )
 
     def add_waveform_view(self, gui):
-        v = WaveformView(waveforms=self._get_waveforms,
+        f = (self._get_waveforms if self.model.traces is not None
+             else self._get_template_waveforms)
+        v = WaveformView(waveforms=f,
                          )
         v = self._add_view(gui, v)
 
@@ -293,6 +295,8 @@ class TemplateController(EventEmitter):
         @v.actions.add(shortcut='w')
         def toggle_templates():
             f, g = self._get_waveforms, self._get_template_waveforms
+            if self.model.traces is None:
+                return
             v.waveforms = f if v.waveforms == g else g
             v.on_select()
 
@@ -512,7 +516,8 @@ class TemplateController(EventEmitter):
         self.supervisor.attach(gui)
 
         self.add_waveform_view(gui)
-        self.add_trace_view(gui)
+        if self.model.traces is not None:
+            self.add_trace_view(gui)
         if self.model.features is not None:
             self.add_feature_view(gui)
         if self.model.template_features is not None:
