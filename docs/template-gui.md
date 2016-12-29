@@ -33,7 +33,7 @@ _______________
 
 * You must start with some automatically sorted data (e.g. by using [KiloSort](https://github.com/cortex-lab/KiloSort) on your data).
 
-* To get started, you can also use a [small test dataset](https://github.com/kwikteam/phy-data/tree/master/template):  
+* To get started, you can also use a [small test dataset](https://codeload.github.com/kwikteam/phy-data/zip/master) (`template` subdirectory).  
 
 * Required files in the dataset.
     * _First a note about many of these files:_ Many of the files are `.npy` format which is a simple file format that can be natively read in python and read in matlab via the [npy-matlab repository](https://github.com/kwikteam/npy-matlab).   
