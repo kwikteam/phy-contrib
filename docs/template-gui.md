@@ -26,46 +26,42 @@ _______________
 
 #### Software
 
-* Install [Phy](https://github.com/kwikteam/phy) 
+* Install [Phy](https://github.com/kwikteam/phy)
 
 <a name="test-datasets"></a>  
 #### Datasets
 
 * You must start with some automatically sorted data (e.g. by using [KiloSort](https://github.com/cortex-lab/KiloSort) on your data).
 
-* To get started, you can also use our test datasets:  
+* To get started, you can also use a [small test dataset](https://codeload.github.com/kwikteam/phy-data/zip/master) (`template` subdirectory).  
 
-   * raw data binaries ([test dataset](https://github.com/kwikteam/test_dataset_raw))
-   * metadata [params.py](https://github.com/phycontrib/params.py)
-   * spike sorting output files (i.e. run Kilosort on the raw data or download the [sorted spikes data](https://github.com/phycontrib/output_files)
-   
 * Required files in the dataset.
-  * _First a note about many of these files:_ Many of the files are `.npy` format which is a simple file format that can be natively read in python and read in matlab via the [npy-matlab repository](https://github.com/kwikteam/npy-matlab).   
-  * A raw data file, with any filename. This file should be "flat binary" format, meaning that the data values corresponding to the voltage traces can are just the literal bytes in the file with no additional formatting (header data is allowed at the beginning of the file, but will not be used)
-  * `params.py` - text file that specifies: 
-    * `dat_path` - location of raw data file
-    * `n_channels_dat` - _total_ number of rows in the data file (not just those that have your neural data on them. This is for loading the file)
-    * `dtype` - data type to read, e.g. 'int16'
-    * `offset` - number of bytes at the beginning of the file to skip
-    * `sample_rate` - in Hz
-    * `hp_filtered` - True/False, whether the data have already been filtered
-  * `amplitudes.npy` - `[nSpikes, ] double` vector with the amplitude scaling factor that was applied to the template when extracting that spike
-  * `channel_map.npy` - `[nChannels, ] int32` vector with the channel map, i.e. which row of the data file to look in for the channel in question
-  * `channel_positions.npy` - `[nChannels, 2] double` matrix with each row giving the x and y coordinates of that channel. Together with the channel map, this determines how waveforms will be plotted in WaveformView (see below). 
-  * `pc_features.npy` - `[nSpikes, nFeaturesPerChannel, nPCFeatures] single` matrix giving the PC values for each spike. The channels that those features came from are specified in pc_features_ind.npy. E.g. the value at `pc_features[123, 1, 5]` is the projection of the 123rd spike onto the 1st PC on the channel given by `pc_feature_ind[5]`. 
-  * `pc_feature_ind.npy` - `[nTemplates, nPCFeatures] uint32` matrix specifying which pcFeatures are included in the pc_features matrix. 
-  * `similar_templates.npy` - `[nTemplates, nTemplates] single` matrix giving the similarity score (larger is more similar) between each pair of templates
-  * `spike_templates.npy` - `[nSpikes, ] uint32` vector specifying the identity of the template that was used to extract each spike
-  * `spike_times.npy` - `[nSpikes, ] uint64` vector giving the spike time of each spike in **samples**. To convert to seconds, divide by sample_rate from params.py. 
-  * `template_features.npy` - `[nSpikes, nTempFeatures] single` matrix giving the magnitude of the projection of each spike onto nTempFeatures other features. Which other features is specified in `template_feature_ind.npy`
-  * `template_feature_ind.npy` - `[nTemplates, nTempFeatures] uint32` matrix specifying which templateFeatures are included in the template_features matrix. 
-  * `templates.npy` - `[nTemplates, nTimePoints, nTempChannels] single` matrix giving the template shapes on the channels given in `templates_ind.npy`
-  * `templates_ind.npy` - `[nTemplates, nTempChannels] double` matrix specifying the channels on which each template is defined. In the case of Kilosort templates_ind is just the integers from 0 to nChannels-1, since templates are defined on all channels. 
-  * `whitening_mat.npy` - `[nChannels, nChannels] double` whitening matrix applied to the data during automatic spike sorting
-  * `whitening_mat_inv.npy` - `[nChannels, nChannels] double`, the inverse of the whitening matrix. 
-  * `spike_clusters.npy` - `[nSpikes, ] int32` vector giving the cluster identity of each spike. This file is optional and if not provided will be automatically created the first time you run the template gui, taking the same values as spike_templates.npy until you do any merging or splitting. 
-  * `cluster_groups.csv` - comma-separated value text file giving the "cluster group" of each cluster (0=noise, 1=MUA, 2=Good, 3=unsorted)
-  
+    * _First a note about many of these files:_ Many of the files are `.npy` format which is a simple file format that can be natively read in python and read in matlab via the [npy-matlab repository](https://github.com/kwikteam/npy-matlab).   
+    * A raw data file, with any filename. This file should be "flat binary" format, meaning that the data values corresponding to the voltage traces can are just the literal bytes in the file with no additional formatting (header data is allowed at the beginning of the file, but will not be used)
+    * `params.py` - text file that specifies:
+        * `dat_path` - location of raw data file
+        * `n_channels_dat` - _total_ number of rows in the data file (not just those that have your neural data on them. This is for loading the file)
+        * `dtype` - data type to read, e.g. 'int16'
+        * `offset` - number of bytes at the beginning of the file to skip
+        * `sample_rate` - in Hz
+        * `hp_filtered` - True/False, whether the data have already been filtered
+    * `amplitudes.npy` - `[nSpikes, ] double` vector with the amplitude scaling factor that was applied to the template when extracting that spike
+    * `channel_map.npy` - `[nChannels, ] int32` vector with the channel map, i.e. which row of the data file to look in for the channel in question
+    * `channel_positions.npy` - `[nChannels, 2] double` matrix with each row giving the x and y coordinates of that channel. Together with the channel map, this determines how waveforms will be plotted in WaveformView (see below).
+    * `pc_features.npy` - `[nSpikes, nFeaturesPerChannel, nPCFeatures] single` matrix giving the PC values for each spike. The channels that those features came from are specified in pc_features_ind.npy. E.g. the value at `pc_features[123, 1, 5]` is the projection of the 123rd spike onto the 1st PC on the channel given by `pc_feature_ind[5]`.
+    * `pc_feature_ind.npy` - `[nTemplates, nPCFeatures] uint32` matrix specifying which pcFeatures are included in the pc_features matrix.
+    * `similar_templates.npy` - `[nTemplates, nTemplates] single` matrix giving the similarity score (larger is more similar) between each pair of templates
+    * `spike_templates.npy` - `[nSpikes, ] uint32` vector specifying the identity of the template that was used to extract each spike
+    * `spike_times.npy` - `[nSpikes, ] uint64` vector giving the spike time of each spike in **samples**. To convert to seconds, divide by sample_rate from params.py.
+    * `template_features.npy` - `[nSpikes, nTempFeatures] single` matrix giving the magnitude of the projection of each spike onto nTempFeatures other features. Which other features is specified in `template_feature_ind.npy`
+    * `template_feature_ind.npy` - `[nTemplates, nTempFeatures] uint32` matrix specifying which templateFeatures are included in the template_features matrix.
+    * `templates.npy` - `[nTemplates, nTimePoints, nTempChannels] single` matrix giving the template shapes on the channels given in `templates_ind.npy`
+    * `templates_ind.npy` - `[nTemplates, nTempChannels] double` matrix specifying the channels on which each template is defined. In the case of Kilosort templates_ind is just the integers from 0 to nChannels-1, since templates are defined on all channels.
+    * `whitening_mat.npy` - `[nChannels, nChannels] double` whitening matrix applied to the data during automatic spike sorting
+    * `whitening_mat_inv.npy` - `[nChannels, nChannels] double`, the inverse of the whitening matrix.
+    * `spike_clusters.npy` - `[nSpikes, ] int32` vector giving the cluster identity of each spike. This file is optional and if not provided will be automatically created the first time you run the template gui, taking the same values as spike_templates.npy until you do any merging or splitting.
+    * `cluster_groups.csv` - comma-separated value text file giving the "cluster group" of each cluster (0=noise, 1=MUA, 2=Good, 3=unsorted)
+
 <a name="running-gui"></a>
 ## Running the Template-GUI
 
@@ -81,7 +77,7 @@ Activate your [Phy environment](https://github.com/kwikteam/phy):
 $  source activate phy
 ```
 
-Ensure that the current directory contains your raw data binaries, sorted spikes and params.py file. 
+Ensure that the current directory contains your raw data binaries, sorted spikes and params.py file.
 
 ```sh
 $  cd /your/path/here/
@@ -105,7 +101,7 @@ The Template-GUI consists of several interactive plotting windows called Views.
 
 In the image above, you can see how these panels are arranged along with the type of plots that are generated. These panels can be rearranged depending on your personal preference. Further information on each view can be found by following these links:
 
-* [TraceView](#TraceView) 
+* [TraceView](#TraceView)
 * [ClusterView](#ClusterView)  
 * [SimilarityView](#SimilarityView)  
 * [CorrelogramView](#CorrelogramView)  
@@ -128,7 +124,7 @@ The scaling of the traces can be adjusted using the drop down toolbar for TraceV
 
 The displayed interval is visible at the bottom of the GUI if you hover the mouse over TraceView.
 
-You can also go directly to a specific time by selecting `Go to` from the TraceView menu. 
+You can also go directly to a specific time by selecting `Go to` from the TraceView menu.
 
 > NOTE:  If the window of displayed traces is increased too much the template-gui's performance will decrease. It is therefore advisable to keep the window small and to shift the window using `Alt + left/right`, rather than to increase the size of the visible trace.
 
@@ -137,13 +133,13 @@ You can also go directly to a specific time by selecting `Go to` from the TraceV
 ### ClusterView and SimilarityView
 __________________________________
 
-`ClusterView` and `SimilarityView` both display a list of all the detected clusters, providing information regarding the cluster `id`, number of spikes (`n_spikes`), the `channel` with the largest amplitude events, and the corresponding `depth` of that channel. This list can be sorted according to any of these displayed parameters by clicking its name. 
+`ClusterView` and `SimilarityView` both display a list of all the detected clusters, providing information regarding the cluster `id`, number of spikes (`n_spikes`), the `channel` with the largest amplitude events, and the corresponding `depth` of that channel. This list can be sorted according to any of these displayed parameters by clicking its name.
 
 A cluster can be selected by clicking it (de-select with `Ctrl and click`), which results in plotting in all the other Views in blue (if selected from `ClusterView`) and red (if selected from the `SimilarityView`). Events from the cluster will also be highlighted in TraceView in the corresponding colours.
 
 ![two clusters](screenshots/two_clusters.png)
 
-Additional clusters can be selected by holding Ctrl and selecting additional clusters. Shift + clicking will allow you to select a range. Each additional cluster is plotted in a different colour. 
+Additional clusters can be selected by holding Ctrl and selecting additional clusters. Shift + clicking will allow you to select a range. Each additional cluster is plotted in a different colour.
 
 ![six clusters](screenshots/six_clusters.png)
 
@@ -168,7 +164,7 @@ Not all waveforms are highlighted in the cluster colour. The colour intensity is
 ### AmplitudeView
 _________________
 
-AmplitudeView displays the scaling of the template for each spike against time. This can indicate electrode drift, which would result in a consistent decrease or increase in amplitude/scaling with respect to time. 
+AmplitudeView displays the scaling of the template for each spike against time. This can indicate electrode drift, which would result in a consistent decrease or increase in amplitude/scaling with respect to time.
 
 > NOTE:  Template scale factor is template-dependent so the points plotted are not necessarily comparable across templates.
 
@@ -191,7 +187,7 @@ Channel0 can be selected or changed using `ctrl + left click` on WaveformView, C
 ### Additional user protocols
 
 <a name="merging"></a>
-`Merging`: If you decide that multiple clusters are very likely to originate from the same cell, you should merge them into a single cluster by pressing the `G` key. This will merge all currently selected clusters. This will result in a new `cluster_id` and will remove the old ones. 
+`Merging`: If you decide that multiple clusters are very likely to originate from the same cell, you should merge them into a single cluster by pressing the `G` key. This will merge all currently selected clusters. This will result in a new `cluster_id` and will remove the old ones.
 
 `Splitting`: If the cluster has two clearly distinct groups of waveforms in the same channel then you should consider splitting the cluster into two groups. Try looking at the FeatureView. If you think the cluster may be made of two distinct groups encircle one of the groups by holding down   `Ctrl` and `left click` around the group you would like to isolate. Each click creates a corner of a polygon selection. Once happy with the selection press `K`. Ideally this will successfully separate the two waveforms into two separate clusters. `Ctrl + right click` will undo your selection.
 
@@ -200,13 +196,13 @@ Assessing `stability`: stability can be inferred using the AmplitudeView and/or 
 <a name="assess-refractory-period"></a>
 Assessing `refractory period`: provided that `n_spikes` is large enough, and that events come from a single, well isolated cell, the ACG should be 0 at the centre of the x-axis corresponding to an extremely low or non existent correlation at lag 0). This is because of the refractory period of the neuron. If the cluster is made up of two distinct neurons, it is very likely that there will be no refractory period.
 
-<a name="keyboard-shortcuts"></a> 
+<a name="keyboard-shortcuts"></a>
 ## Keyboard shortcuts
 
 ### Merging and splitting
 Merge: `G`
 Split: `K`
-Select for splitting: Hold `Ctrl` and use the `left mouse click` (on FeatureView) to define each point of your desired polygon. Define a region around the events you want to separate and press `K` to split when you are satisfied with your selection. `Ctrl + right mouse click` will undo your selection. 
+Select for splitting: Hold `Ctrl` and use the `left mouse click` (on FeatureView) to define each point of your desired polygon. Define a region around the events you want to separate and press `K` to split when you are satisfied with your selection. `Ctrl + right mouse click` will undo your selection.
 
 ### Classifying clusters
 Classify selected cluster(s) as 'good': `Alt + G`  
@@ -228,7 +224,7 @@ Decrease scaling: `Alt + down`
 ### Misc
 
 Undo: `Ctrl + Z`
-Select most similar/next most similar cluster: `spacebar` 
+Select most similar/next most similar cluster: `spacebar`
 
 ### "Snippets"
 
@@ -236,13 +232,13 @@ Snippets are commands you can enter quickly from the keyboard to perform certain
 
   `:c 321[Enter]`
 
-Then cluster 321 will be selected. 
+Then cluster 321 will be selected.
 * Available snippets:
-  * `:c X Y Z` - Select clusters X, Y, and Z
-  * `:cb X` - set correlogram bin size to X
-  * `:cw X` - set correlogram window width to X
+    * `:c X Y Z` - Select clusters X, Y, and Z
+    * `:cb X` - set correlogram bin size to X
+    * `:cw X` - set correlogram window width to X
 
-All commands can be run as snippets. For example, `:move`, `:merge`, `:recluster`, and so on. The command name of every action is displayed in the status bar at the bottom of the window when you hover your mouse on any action in the menu bar. 
+All commands can be run as snippets. For example, `:move`, `:merge`, `:recluster`, and so on. The command name of every action is displayed in the status bar at the bottom of the window when you hover your mouse on any action in the menu bar.
 
 <a name="user-guide"></a>  
 ## A typical approach to manual clustering
@@ -256,7 +252,7 @@ All commands can be run as snippets. For example, `:move`, `:merge`, `:recluster
 5) Once you are satisfied with your cluster classifications, select save from the [ClusterView](#ClusterView) drop down menu. This will create a .csv file containing a list of cluster ids and their corresponding groups (good, MUA, noise). Saving will also make spike_clusters.npy, a file containing the cluster identities of each spike. These files are saved to the current directory ([step 6](#step6)).  
 
 ### Detailed guide
- 
+
 #### Step 1 - select a cluster from ClusterView
 
 
@@ -270,7 +266,7 @@ Does the ACG reveal no evidence of a refractory period?
 
 > Hint: hit the spacebar to rapidly select the most similar cluster
 
-#### Step 2 - waveform similarity 
+#### Step 2 - waveform similarity
 
 ```
 Are the waveforms clearly distinct or do the clusters occupy a clearly different set of channels?
@@ -281,7 +277,7 @@ Are the waveforms clearly distinct or do the clusters occupy a clearly different
 
 #### Step 3 -  assess cross correlograms
 ```
-In the ACG/CCGs, is there evidence that both neurons have good refractory periods, but the CCG shows no refractory period? 
+In the ACG/CCGs, is there evidence that both neurons have good refractory periods, but the CCG shows no refractory period?
 ```
 
 * Consider [CorrelogramView](#CorrelogramView). If the [ACGs](#ACG) for each cluster are dissimilar and there is no refractory period visible in the [CCG](#CCG), they are not the same neuron; move on to next most similar (hit `Spacebar` or select manually `Ctrl + click`)
@@ -302,14 +298,14 @@ Are the clusters non-overlapping in all feature plots?
 Do they occupy different areas in feature space?
 ```
 * If 4a YES and 4b NO: the clusters should probably be merged (press the `G` key to group them)
-* Otherwise select the next most similar cluster and start over from step 2 
+* Otherwise select the next most similar cluster and start over from step 2
 
 
 #### Step 5 - classify as good
 
 Once all potential comparisons have been made, if there is a clear [refractory period](#assess-refractory-period) and there is no evidence that the cluster needs to be split, the cluster can be classified as 'good' (`Alt + G`). When a cluster is classified as 'good' it will appear in the Cluster and Similarity Views in green. If it is in any way unclear, then it should be classified as MUA. When a cluster is classified as 'MUA' (`Alt + M`) or 'noise' (`Alt + N`) it will appear in the Cluster and Similarity Views in light grey. There are additional packages for [objective assessment of clustering quality](https://github.com/cortex-lab/sortingQuality).
 
->  **Exceptions to this** include bursting neurons, which are a special case. Action potential bursts usually consist of spikes/subclusters that differ in shape/amplitude. Waveforms and features may appear distinct, although the events belong to the same cluster. Clusters belonging to a burst from the same neuron have signature CCGs: the smaller of the two reliably follows the larger by a very short interval (1-3ms). This displays itself as a very clear asymmetric distribution, with a clear refractory period. 
+>    **Exceptions to this** include bursting neurons, which are a special case. Action potential bursts usually consist of spikes/subclusters that differ in shape/amplitude. Waveforms and features may appear distinct, although the events belong to the same cluster. Clusters belonging to a burst from the same neuron have signature CCGs: the smaller of the two reliably follows the larger by a very short interval (1-3ms). This displays itself as a very clear asymmetric distribution, with a clear refractory period.
 
 
 #### Step 6 - save your progress
@@ -327,7 +323,7 @@ For many applications, clusters with very few APs can be ignored (below 20). The
 <a name="FAQ"></a>
 ## FAQ
 * I opened the GUI but don't have a waveform view or trace view. What happened?
-  * These views won't show if the data file isn't found or can't be loaded. So check that your params.py has the correct path for the data file and that it is the correct file.
+    * These views won't show if the data file isn't found or can't be loaded. So check that your params.py has the correct path for the data file and that it is the correct file.
 
 <a name="glossary"></a>
 ## Glossary
@@ -353,5 +349,3 @@ For many applications, clusters with very few APs can be ignored (below 20). The
 <a name="similarity"></a>  
 
 `Similarity`: is a variable in `SimilarityView` that indicates how similar a cluster is to the one selected in `ClusterView`. This should guide the user to clusters that should be considered for [merging](#merging) using the protocol in the [user guide](user-guide). High similarity does not necessarily mean the clusters should be merged. There is no hard cut off for considering similarity, but clusters with low similarity are very unlikely to need to be merged.
-
-
