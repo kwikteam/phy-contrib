@@ -504,6 +504,11 @@ class TemplateModel(object):
         template, channel_ids = data[template_id], cols[template_id]
         assert template.ndim == 2
         assert template.shape[1] == len(channel_ids)
+        # Remove unused channels = -1.
+        used = channel_ids != -1
+        template = template[:, used]
+        channel_ids = channel_ids[used]
+        # Compute the amplitude and the channel with max amplitude.
         amplitude = template.max(axis=0) - template.min(axis=0)
         best_channel = np.argmax(amplitude)
         b = Bunch(template=template,
