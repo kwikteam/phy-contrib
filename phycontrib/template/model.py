@@ -483,7 +483,7 @@ class TemplateModel(object):
         data, cols = self.sparse_templates.data, self.sparse_templates.cols
         assert cols is not None
         template_w, channel_ids = data[template_id], cols[template_id]
-        template = self._unwhiten(template_w)
+        template = self._unwhiten(template_w).astype(np.float32)
         assert template.ndim == 2
         assert template.shape[1] == len(channel_ids)
         # Remove unused channels = -1.
@@ -503,7 +503,7 @@ class TemplateModel(object):
     def _get_template_dense(self, template_id):
         """Return data for one template."""
         template_w = self.sparse_templates.data[template_id, ...]
-        template = self._unwhiten(template_w)
+        template = self._unwhiten(template_w).astype(np.float32)
         assert template.ndim == 2
         amplitude = template.max(axis=0) - template.min(axis=0)
         best_channel = np.argmax(amplitude)
