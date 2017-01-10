@@ -208,6 +208,7 @@ class TemplateModel(object):
     def _load_data(self):
         sr = self.sample_rate
 
+        # Spikes.
         self.spike_samples = self._load_spike_samples()
         self.spike_times = self.spike_samples / sr
         ns, = self.n_spikes, = self.spike_times.shape
@@ -221,15 +222,9 @@ class TemplateModel(object):
         self.spike_clusters = self._load_spike_clusters()
         assert self.spike_clusters.shape == (ns,)
 
-        self.templates = self._load_templates()
-        self.n_templates, self.n_samples_templates, self.n_channels = \
-            self.templates.shape
-        nc = self.n_channels
-
-        self.sparse_templates = self._load_sparse_templates()
-
+        # Channels.
         self.channel_mapping = self._load_channel_map()
-        assert self.channel_mapping.shape == (nc,)
+        self.n_channels = nc = self.channel_mapping.shape[0]
         assert np.all(self.channel_mapping <= self.n_channels_dat - 1)
 
         self.channel_positions = self._load_channel_positions()
@@ -237,6 +232,16 @@ class TemplateModel(object):
 
         self.channel_vertical_order = np.argsort(self.channel_positions[:, 1])
 
+        # Templates.
+        self.sparse_templates = self._load_templates()
+        self.n_templates = self.sparse_templates.data.shape[0]
+        self.n_samples_templates = self.sparse_templates.data.shape[1]
+        self.n_channels_loc = self.sparse_templates.data.shape[2]
+        if self.sparse_templates.cols is not None:
+            assert self.sparse_templates.cols.shape == (self.n_templates,
+                                                        self.n_channels_loc)
+
+        # Whitening.
         self.wm = self._load_wm()
         assert self.wm.shape == (nc, nc)
         try:
@@ -244,14 +249,6 @@ class TemplateModel(object):
         except IOError:
             self.wmi = self._compute_wmi(self.wm)
         assert self.wmi.shape == (nc, nc)
-
-        try:
-            self.templates_unw = self._load_templates_unw()
-        except IOError:
-            self.templates_unw = self._compute_templates_unw(self.templates,
-                                                             self.wmi)
-        assert self.templates.ndim == 3
-        assert self.templates_unw.shape == self.templates.shape
 
         self.similar_templates = self._load_similar_templates()
         assert self.similar_templates.shape == (self.n_templates,
@@ -269,6 +266,7 @@ class TemplateModel(object):
                          self.n_spikes,
                          )
 
+        # Features.
         f = self._load_features()
         if f is not None:
             self.features = f.data
@@ -290,7 +288,7 @@ class TemplateModel(object):
 
     def _create_waveform_loader(self):
         # Number of time samples in the templates.
-        nsw = self.templates_unw.shape[1]
+        nsw = self.n_samples_templates
         if self.traces is not None:
             return WaveformLoader(traces=self.traces,
                                   spike_samples=self.spike_samples,
@@ -395,26 +393,23 @@ class TemplateModel(object):
 
     def _load_templates(self):
         logger.debug("Loading templates.")
-        templates = self._read_array('templates')
-        # templates[np.isnan(templates)] = 0
-        assert templates.dtype in (np.float32, np.float64)
-        return templates
 
-    def _load_templates_unw(self):
-        logger.debug("Loading unwhitened templates.")
-        templates_unw = self._read_array('templates_unw')
-        # templates_unw[np.isnan(templates_unw)] = 0
-        assert templates_unw.dtype in (np.float32, np.float64)
-        return templates_unw
+        # Sparse structure: regular array with col indices.
+        try:
+            data = self._read_array('templates')
+            assert data.ndim == 3
+            assert data.dtype in (np.float32, np.float64)
+            n_templates, n_samples, n_channels_loc = data.shape
+        except IOError:
+            return
 
-    def _compute_templates_unw(self, templates, wmi):
-        logger.debug("Couldn't find unwhitened templates, computing them.")
-        logger.debug("Unwhitening the templates %s.", templates.shape)
-        templates_unw = np.dot(np.ascontiguousarray(templates),
-                               np.ascontiguousarray(wmi))
-        # Save the unwhitened templates.
-        self._write_array('templates_unw', templates_unw)
-        return templates_unw
+        try:
+            cols = self._read_array('template_ind')
+            assert cols.shape == (n_templates, n_channels_loc)
+        except IOError:
+            cols = None
+
+        return Bunch(data=data, cols=cols)
 
     def _load_wm(self):
         logger.debug("Loading the whitening matrix.")
@@ -430,23 +425,9 @@ class TemplateModel(object):
         self._write_array('whitening_mat_inv', wmi)
         return wmi
 
-    def _load_sparse_templates(self):
-
-        # Sparse structure: regular array with col indices.
-        try:
-            data = self._read_array('sparse_templates')
-            assert data.ndim == 3
-            n_templates, n_samples, n_channels_loc = data.shape
-        except IOError:
-            return
-
-        try:
-            cols = self._read_array('sparse_templates_channels')
-            assert cols.shape == (self.n_templates, n_channels_loc)
-        except IOError:
-            cols = None
-
-        return Bunch(data=data, cols=cols)
+    def _unwhiten(self, x):
+        return np.dot(np.ascontiguousarray(x),
+                      np.ascontiguousarray(self.wmi))
 
     def _load_features(self):
 
@@ -499,8 +480,8 @@ class TemplateModel(object):
         return Bunch(data=data, cols=cols, rows=rows)
 
     def _get_template_sparse(self, template_id):
-        assert self.sparse_templates
         data, cols = self.sparse_templates.data, self.sparse_templates.cols
+        assert cols is not None
         template, channel_ids = data[template_id], cols[template_id]
         assert template.ndim == 2
         assert template.shape[1] == len(channel_ids)
@@ -520,7 +501,8 @@ class TemplateModel(object):
 
     def _get_template_dense(self, template_id):
         """Return data for one template."""
-        template = self.templates_unw[template_id, ...]
+        template_w = self.sparse_templates.data[template_id, ...]
+        template = self._unwhiten(template_w)
         assert template.ndim == 2
         amplitude = template.max(axis=0) - template.min(axis=0)
         best_channel = np.argmax(amplitude)
@@ -538,7 +520,7 @@ class TemplateModel(object):
         return b
 
     def get_template(self, template_id):
-        if self.sparse_templates:
+        if self.sparse_templates.cols is not None:
             return self._get_template_sparse(template_id)
         else:
             return self._get_template_dense(template_id)

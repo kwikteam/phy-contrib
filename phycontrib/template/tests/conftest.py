@@ -22,24 +22,28 @@ from phycontrib.utils.testing import download_test_file
 #------------------------------------------------------------------------------
 
 _FILES = ['template/params.py',
-          'template/amplitudes.npy',
-          'template/pc_feature_ind.npy',
-          'template/spike_clusters.npy',
-          'template/template_features.npy',
-          'template/whitening_mat_inv.npy',
-          'template/channel_map.npy',
-          'template/pc_features.npy',
-          'template/spike_templates.npy',
-          'template/templates_ind.npy',
-          'template/whitening_mat.npy',
-          'template/channel_positions.npy',
           'template/sim_binary.dat',
           'template/spike_times.npy',
-          'template/templates.npy',
-          'template/similar_templates.npy',
-          'template/template_feature_ind.npy',
-          'template/templates_unw.npy',
+          'template/spike_templates.npy',
+          'template/spike_clusters.npy',
+          'template/amplitudes.npy',
+
           'template/cluster_group.tsv',
+
+          'template/channel_map.npy',
+          'template/channel_positions.npy',
+
+          'template/templates.npy',
+          # 'template/template_ind.npy',
+          'template/similar_templates.npy',
+          'template/whitening_mat.npy',
+
+          'template/pc_features.npy',
+          'template/pc_feature_ind.npy',
+
+          'template/template_features.npy',
+          'template/template_feature_ind.npy',
+
           ]
 
 
