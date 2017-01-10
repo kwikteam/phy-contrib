@@ -482,7 +482,8 @@ class TemplateModel(object):
     def _get_template_sparse(self, template_id):
         data, cols = self.sparse_templates.data, self.sparse_templates.cols
         assert cols is not None
-        template, channel_ids = data[template_id], cols[template_id]
+        template_w, channel_ids = data[template_id], cols[template_id]
+        template = self._unwhiten(template_w)
         assert template.ndim == 2
         assert template.shape[1] == len(channel_ids)
         # Remove unused channels = -1.
