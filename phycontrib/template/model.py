@@ -241,7 +241,7 @@ class TemplateModel(object):
             assert self.sparse_templates.cols.shape == (self.n_templates,
                                                         self.n_channels_loc)
 
-        # Whitening.
+        # Whitening.
         self.wm = self._load_wm()
         assert self.wm.shape == (nc, nc)
         try:
