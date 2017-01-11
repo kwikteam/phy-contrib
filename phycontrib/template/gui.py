@@ -316,15 +316,20 @@ class TemplateController(EventEmitter):
         if cluster_id is None:
             # Background points.
             ns = self.model.n_spikes
-            return np.arange(0, ns, max(1, ns // nsf))
+            spike_ids = np.arange(0, ns, max(1, ns // nsf))
         else:
             # Load all spikes from the cluster if load_all is True.
             n = nsf if not load_all else None
-            return self.selector.select_spikes([cluster_id], n)
+            spike_ids = self.selector.select_spikes([cluster_id], n)
+        # Remove spike_ids that do not belong to model.features_rows
+        if self.model.features_rows is not None:
+            spike_ids = np.intersect1d(spike_ids, self.model.features_rows)
+        return spike_ids
 
     def _get_spike_times(self, cluster_id=None, load_all=None):
         spike_ids = self._get_spike_ids(cluster_id, load_all=load_all)
         return Bunch(data=self.model.spike_times[spike_ids],
+                     spike_ids=spike_ids,
                      lim=(0., self.model.duration))
 
     def _get_features(self, cluster_id=None, channel_ids=None, load_all=None):
@@ -334,6 +339,14 @@ class TemplateController(EventEmitter):
         if cluster_id is not None and channel_ids is None:
             channel_ids = self.get_best_channels(cluster_id)
         data = self.model.get_features(spike_ids, channel_ids)
+        assert data.shape[:2] == (len(spike_ids), len(channel_ids))
+        # Remove rows with at least one nan value.
+        nan = np.unique(np.nonzero(np.isnan(data))[0])
+        nonnan = np.setdiff1d(np.arange(len(spike_ids)), nan)
+        data = data[nonnan, ...]
+        spike_ids = spike_ids[nonnan]
+        assert data.shape[:2] == (len(spike_ids), len(channel_ids))
+        assert np.isnan(data).sum() == 0
         return Bunch(data=data,
                      spike_ids=spike_ids,
                      channel_ids=channel_ids,

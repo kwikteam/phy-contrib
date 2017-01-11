@@ -540,33 +540,48 @@ class TemplateModel(object):
             return
         out = self.waveform_loader.get(spike_ids, channel_ids)
         assert out.dtype in (np.float32, np.float64)
+        assert out.shape[0] == len(spike_ids)
+        assert out.shape[2] == len(channel_ids)
         return out
 
     def get_features(self, spike_ids, channel_ids):
         """Return sparse features for given spikes."""
         data = self.features
         _, n_channels_loc, n_pcs = data.shape
+        ns = len(spike_ids)
+        nc = len(channel_ids)
+
+        # Initialize the output array.
+        features = np.empty((ns, n_channels_loc, n_pcs))
+        features[:] = np.NAN
 
         if self.features_rows is not None:
-            spike_ids = np.intersect1d(spike_ids, self.features_rows)
+            s = np.intersect1d(spike_ids, self.features_rows)
             # Relative indices of the spikes in the self.features_spike_ids
             # array, necessary to load features from all_features which only
             # contains the subset of the spikes.
-            rows = _index_of(spike_ids, self.features_rows)
+            rows = _index_of(s, self.features_rows)
+            # Relative indices of the non-null rows in the output features
+            # array.
+            rows_out = _index_of(s, spike_ids)
         else:
             rows = spike_ids
-        features = data[rows]
+            rows_out = slice(None, None, None)
+        features[rows_out, ...] = data[rows]
 
         if self.features_cols is not None:
             assert self.features_cols.shape[1] == n_channels_loc
             cols = self.features_cols[self.spike_templates[spike_ids]]
             features = from_sparse(features, cols, channel_ids)
+
+        assert features.shape == (ns, nc, n_pcs)
         return features
 
     def get_template_features(self, spike_ids):
         """Return sparse template features for given spikes."""
         data = self.template_features
         _, n_templates_loc = data.shape
+        ns = len(spike_ids)
 
         if self.template_features_rows is not None:
             spike_ids = np.intersect1d(spike_ids, self.features_rows)
@@ -585,4 +600,5 @@ class TemplateModel(object):
                                             cols,
                                             np.arange(self.n_templates),
                                             )
+        assert template_features.shape[0] == ns
         return template_features
