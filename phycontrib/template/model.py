@@ -405,6 +405,7 @@ class TemplateModel(object):
 
         try:
             cols = self._read_array('template_ind')
+            logger.debug("Templates are sparse.")
             assert cols.shape == (n_templates, n_channels_loc)
         except IOError:
             cols = None
@@ -425,9 +426,14 @@ class TemplateModel(object):
         self._write_array('whitening_mat_inv', wmi)
         return wmi
 
-    def _unwhiten(self, x):
+    def _unwhiten(self, x, channel_ids=None):
+        mat = self.wmi
+        if channel_ids is not None:
+            mat = mat[np.ix_(channel_ids, channel_ids)]
+            assert mat.shape == (len(channel_ids),) * 2
+        assert x.shape[1] == mat.shape[0]
         return np.dot(np.ascontiguousarray(x),
-                      np.ascontiguousarray(self.wmi))
+                      np.ascontiguousarray(mat))
 
     def _load_features(self):
 
@@ -483,13 +489,15 @@ class TemplateModel(object):
         data, cols = self.sparse_templates.data, self.sparse_templates.cols
         assert cols is not None
         template_w, channel_ids = data[template_id], cols[template_id]
-        template = self._unwhiten(template_w).astype(np.float32)
-        assert template.ndim == 2
-        assert template.shape[1] == len(channel_ids)
         # Remove unused channels = -1.
         used = channel_ids != -1
-        template = template[:, used]
+        template_w = template_w[:, used]
         channel_ids = channel_ids[used]
+        # Unwhiten.
+        template = self._unwhiten(template_w, channel_ids=channel_ids)
+        template = template.astype(np.float32)
+        assert template.ndim == 2
+        assert template.shape[1] == len(channel_ids)
         # Compute the amplitude and the channel with max amplitude.
         amplitude = template.max(axis=0) - template.min(axis=0)
         best_channel = np.argmax(amplitude)
