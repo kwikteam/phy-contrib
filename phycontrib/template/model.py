@@ -101,7 +101,7 @@ def load_raw_data(path=None, n_channels_dat=None, dtype=None, offset=None):
     logger.debug("Loading traces at `%s`.", path)
     return _dat_to_traces(path,
                           n_channels=n_channels_dat,
-                          dtype=dtype or np.int16,
+                          dtype=dtype if dtype is not None else np.int16,
                           offset=offset,
                           )
 
