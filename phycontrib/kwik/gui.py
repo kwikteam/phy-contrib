@@ -271,8 +271,8 @@ class KwikController(EventEmitter):
             n = nsf if not load_all else None
             return self.selector.select_spikes([cluster_id], n)
 
-    def _get_spike_times(self, cluster_id=None):
-        spike_ids = self._get_spike_ids(cluster_id)
+    def _get_spike_times(self, cluster_id=None, load_all=None):
+        spike_ids = self._get_spike_ids(cluster_id, load_all=load_all)
         return Bunch(data=self.model.spike_times[spike_ids],
                      lim=(0., self.model.duration))
 
