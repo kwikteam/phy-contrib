@@ -11,6 +11,7 @@ import logging
 
 from phy.utils import load_master_config, get_plugin
 
+from .backup import BackupPlugin  # noqa
 from .precache import PrecachePlugin  # noqa
 from .saveprompt import SavePromptPlugin  # noqa
 
