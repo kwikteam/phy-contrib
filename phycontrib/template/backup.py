@@ -77,7 +77,7 @@ def _parse_arg(s):
         return s
 
 
-def _load_backup(log_path, controller):
+def _replay_actions(log_path, controller):
     c = controller.supervisor
     for row in _load_rows(log_path):
         a = row[0]
@@ -97,6 +97,40 @@ def _load_backup(log_path, controller):
     c.save()
 
 
+def _load_backup(params_path):
+    params = _read_python(params_path)
+    params['dat_path'] = op.join(op.dirname(params_path), params['dat_path'])
+    dat_path = params['dat_path']
+    assert dat_path
+    dir_path = op.dirname(op.realpath(op.expanduser(dat_path)))
+    dir_path = params.get('dir_path', dir_path)
+
+    # Make sure we start from a clean state.
+    if op.exists(op.join(dir_path, '.phy')):
+        logger.warn("Please delete the .phy subfolder before loading "
+                    "the backup.")
+        return
+    for filename in ('spike_clusters.npy', 'cluster_group.tsv'):
+        if op.exists(op.join(dir_path, filename)):
+            logger.warn("Please delete the %s file "
+                        "before loading the backup.", filename)
+            return
+
+    # Create the controller.
+    from phycontrib.template import TemplateController
+    controller = TemplateController(config_dir=op.dirname(params_path),
+                                    **params)
+
+    backup_dir = op.join(dir_path, '.phy-backup')
+
+    # Get the log path.
+    log_path = op.join(backup_dir, 'history.tsv')
+    if not op.exists(log_path):
+        logger.warn("The file `%s` doesn't exist.", log_path)
+        return
+    _replay_actions(log_path, controller)
+
+
 #------------------------------------------------------------------------------
 # Plugin
 #------------------------------------------------------------------------------
@@ -110,12 +144,7 @@ class BackupPlugin(IPlugin):
         _backup(self.dir_path)
         _delete_old_backup(self.backup_path, self.max_n_files)
 
-    def attach_to_controller(self, controller):
-        self.dir_path = controller.model.dir_path
-        self.backup_dir = op.join(self.dir_path, '.phy-backup')
-        if not op.exists(self.backup_dir):
-            os.mkdir(self.backup_dir)
-
+    def _set_timer(self, controller):
         @controller.connect
         def on_gui_ready(gui):
             if controller.gui_name != 'TemplateGUI':
@@ -126,66 +155,50 @@ class BackupPlugin(IPlugin):
             timer.timeout.connect(self._tick)
             timer.start(self.delay * 1000)  # in milliseconds.
 
-            # Log the actions in a machine-readable way.
-            log_path = op.join(self.backup_dir, 'history.tsv')
+    def _set_history_logger(self, controller):
+        # Log the actions in a machine-readable way.
+        log_path = op.join(self.backup_dir, 'history.tsv')
 
-            # Log clustering actions.
-            @controller.supervisor.clustering.connect
-            def on_cluster(up):
-                if up.history:
-                    row = (up.history.lower(), None, None)
-                elif up.description == 'merge':
-                    row = ('merge',
-                           ','.join(map(str, up.deleted)),
-                           up.added[0])
-                else:
-                    row = ('assign',
-                           ','.join(map(str, up.spike_ids)),
-                           ','.join(map(str, up.spike_clusters)))
+        # Log clustering actions.
+        @controller.supervisor.clustering.connect
+        def on_cluster(up):
+            if up.history:
+                row = (up.history.lower(), None, None)
+            elif up.description == 'merge':
+                row = ('merge',
+                       ','.join(map(str, up.deleted)),
+                       up.added[0])
+            else:
+                row = ('assign',
+                       ','.join(map(str, up.spike_ids)),
+                       ','.join(map(str, up.spike_clusters)))
 
-                _write_row(log_path, row)
+            _write_row(log_path, row)
 
-            # Log cluster_meta actions.
-            @controller.supervisor.cluster_meta.connect  # noqa
-            def on_cluster(up):
-                if up.history:
-                    row = (up.history.lower(), None, None)
-                else:
-                    row = (up.description,
-                           ','.join(map(str, up.metadata_changed)),
-                           up.metadata_value,
-                           )
+        # Log cluster_meta actions.
+        @controller.supervisor.cluster_meta.connect  # noqa
+        def on_cluster(up):
+            if up.history:
+                row = (up.history.lower(), None, None)
+            else:
+                row = (up.description,
+                       ','.join(map(str, up.metadata_changed)),
+                       up.metadata_value,
+                       )
 
-                _write_row(log_path, row)
+            _write_row(log_path, row)
+
+    def attach_to_controller(self, controller):
+        self.dir_path = controller.model.dir_path
+        self.backup_dir = op.join(self.dir_path, '.phy-backup')
+        if not op.exists(self.backup_dir):
+            os.mkdir(self.backup_dir)
+        self._set_timer(controller)
+        self._set_history_logger(controller)
 
     def attach_to_cli(self, cli):
         @cli.command('template-load-backup')
         @click.argument('params-path', type=click.Path(exists=True))
         def load_backup(params_path):
             """Load the backup."""
-            dir_path = op.dirname(params_path)
-
-            # Make sure we start from a clean state.
-            if op.exists(op.join(dir_path, '.phy')):
-                logger.warn("Please delete the .phy subfolder before loading "
-                            "the backup.")
-                return
-            for filename in ('spike_clusters.npy', 'cluster_group.tsv'):
-                if op.exists(op.join(dir_path, filename)):
-                    logger.warn("Please delete the %s file "
-                                "before loading the backup.", filename)
-                    return
-
-            # Create the controller.
-            from phycontrib.template import TemplateController
-            params = _read_python(params_path)
-            controller = TemplateController(**params)
-
-            backup_dir = op.join(dir_path, '.phy-backup')
-
-            # Get the log path.
-            log_path = op.join(backup_dir, 'history.tsv')
-            if not op.exists(log_path):
-                logger.warn("The file `%s` doesn't exist.", log_path)
-
-            _load_backup(log_path, controller)
+            _load_backup(params_path)

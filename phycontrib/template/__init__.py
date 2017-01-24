@@ -8,3 +8,4 @@
 #------------------------------------------------------------------------------
 
 from .gui import TemplateGUIPlugin, TemplateController  # noqa
+from .backup import BackupPlugin  # noqa
