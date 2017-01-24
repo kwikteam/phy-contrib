@@ -13,7 +13,7 @@ from pytest import fixture
 
 from phy.utils._misc import _read_python
 
-from ..model import TemplateModel
+from phycontrib.template.model import TemplateModel
 from phycontrib.utils.testing import download_test_file
 
 

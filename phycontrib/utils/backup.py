@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+
+"""Backup plugin."""
+
+#------------------------------------------------------------------------------
+# Imports
+#------------------------------------------------------------------------------
+
 import csv
 from datetime import datetime
 import logging
@@ -14,6 +22,10 @@ from phy.utils._misc import _read_python
 
 logger = logging.getLogger(__name__)
 
+
+#------------------------------------------------------------------------------
+# Utility functions
+#------------------------------------------------------------------------------
 
 def _now():
     return datetime.now().strftime("%Y%m%d%H%M%S")
@@ -64,6 +76,30 @@ def _parse_arg(s):
     else:
         return s
 
+
+def _load_backup(log_path, controller):
+    c = controller.supervisor
+    for row in _load_rows(log_path):
+        a = row[0]
+        ids = _parse_arg(row[1])
+        to = _parse_arg(row[2])
+
+        if a == 'merge':
+            c.merge(ids, to[0])
+        elif a == 'assign':
+            c.split(ids, to)
+        elif a == 'metadata_group':
+            c.move(to, ids)
+        elif a == 'undo':
+            c.undo()
+        elif a == 'redo':
+            c.redo()
+    c.save()
+
+
+#------------------------------------------------------------------------------
+# Plugin
+#------------------------------------------------------------------------------
 
 class BackupPlugin(IPlugin):
     max_n_files = 10  # max number of backup files to keep
@@ -146,26 +182,10 @@ class BackupPlugin(IPlugin):
             controller = TemplateController(**params)
 
             backup_dir = op.join(dir_path, '.phy-backup')
+
             # Get the log path.
             log_path = op.join(backup_dir, 'history.tsv')
             if not op.exists(log_path):
                 logger.warn("The file `%s` doesn't exist.", log_path)
 
-            c = controller.supervisor
-            for row in _load_rows(log_path):
-                a = row[0]
-                ids = _parse_arg(row[1])
-                to = _parse_arg(row[2])
-
-                if a == 'merge':
-                    c.merge(ids, to[0])
-                elif a == 'assign':
-                    c.split(ids, to)
-                elif a == 'metadata_group':
-                    c.move(to, ids)
-                elif a == 'undo':
-                    c.undo()
-                elif a == 'redo':
-                    c.redo()
-
-            c.save()
+            _load_backup(log_path, controller)
