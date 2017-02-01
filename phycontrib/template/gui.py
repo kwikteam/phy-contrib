@@ -105,7 +105,6 @@ class TemplateController(EventEmitter):
     def _set_cache(self):
         memcached = ('get_template_counts',
                      'get_template_for_cluster',
-                     'similarity',
                      'get_best_channel',
                      'get_best_channels',
                      'get_probe_depth',

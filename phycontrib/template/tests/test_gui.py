@@ -28,7 +28,9 @@ logger = logging.getLogger(__name__)
 @fixture
 def controller(tempdir, template_model):
     _copy_gui_state('TemplateGUI', 'template', config_dir=tempdir)
-    plugins = ['PrecachePlugin', 'SavePrompt']
+    plugins = ['PrecachePlugin',
+               'SavePrompt',
+               ]
     c = TemplateController(model=template_model, config_dir=tempdir,
                            plugins=plugins)
     return c
@@ -53,7 +55,7 @@ def test_template_describe(runner, tempdir, controller):
     # assert 'main*' in res.output
 
 
-def test_gui_1(qtbot, tempdir, controller):
+def test_template_gui_1(qtbot, tempdir, controller):
     gui = controller.create_gui()
     s = controller.supervisor
     gui.show()
@@ -132,5 +134,26 @@ def test_template_gui_2(qtbot, controller):
     qtbot.keyPress(gui, Qt.Key_Space)
     qtbot.keyPress(gui, Qt.Key_Enter)
     qtbot.keyPress(gui, Qt.Key_S, modifier=Qt.ControlModifier)
+
+    gui.close()
+
+
+def test_template_gui_sim(qtbot, controller):
+    """Ensure that the similarity is refreshed when clusters change."""
+    gui = controller.create_gui()
+    s = controller.supervisor
+    s.cluster_view.sort_by('id', 'desc')
+    s.next()
+    s.similarity_view.sort_by('id', 'desc')
+    cl = 63
+    assert s.selected == [cl]
+    s.next()
+    assert s.selected == [cl, cl - 1]
+    s.next()
+    assert s.selected == [cl, cl - 2]
+    s.merge()
+    s.next_best()
+    s.next()
+    assert s.selected == [cl - 1, cl + 1]
 
     gui.close()
