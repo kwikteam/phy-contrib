@@ -173,13 +173,18 @@ class KwikController(EventEmitter):
         return self.get_best_channels(cluster_id)[0]
 
     def get_best_channels(self, cluster_id):
+        """Only used in the trace view."""
         mm = self._get_mean_masks(cluster_id)
         channel_ids = np.argsort(mm)[::-1]
-        channel_ids = channel_ids[mm[channel_ids] > .1]
+        ind = mm[channel_ids] > .1
+        if np.sum(ind) > 0:
+            channel_ids = channel_ids[ind]
+        else:
+            channel_ids = channel_ids[:4]
         return channel_ids
 
     def get_cluster_position(self, cluster_id):
-        channel_id = self.get_best_channels(cluster_id)[0]
+        channel_id = self.get_best_channel(cluster_id)
         return self.model.channel_positions[channel_id]
 
     def get_probe_depth(self, cluster_id):
@@ -311,7 +316,8 @@ class KwikController(EventEmitter):
         traces_interval = traces_interval[:, c]
 
         def gbc(cluster_id):
-            return c[self.get_best_channels(cluster_id)]
+            ch = self.get_best_channels(cluster_id)
+            return c[ch]
 
         out = Bunch(data=traces_interval)
         out.waveforms = []
@@ -407,7 +413,8 @@ class KwikController(EventEmitter):
         self.supervisor.attach(gui)
 
         self.add_waveform_view(gui)
-        self.add_trace_view(gui)
+        if self.model.traces is not None:
+            self.add_trace_view(gui)
         self.add_feature_view(gui)
         self.add_correlogram_view(gui)
 
