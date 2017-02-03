@@ -16,7 +16,6 @@ from phy.utils.cli import phy
 from phy.gui.qt import Qt
 from phy.utils._misc import _read_python
 from ..gui import TemplateController, TemplateGUIPlugin
-from phycontrib import _copy_gui_state
 
 logger = logging.getLogger(__name__)
 
@@ -24,17 +23,6 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 # Fixtures
 #------------------------------------------------------------------------------
-
-@fixture
-def controller(tempdir, template_model):
-    _copy_gui_state('TemplateGUI', 'template', config_dir=tempdir)
-    plugins = ['PrecachePlugin',
-               'SavePrompt',
-               ]
-    c = TemplateController(model=template_model, config_dir=tempdir,
-                           plugins=plugins)
-    return c
-
 
 @fixture
 def runner():
@@ -47,7 +35,7 @@ def runner():
 # Tests
 #------------------------------------------------------------------------------
 
-def test_template_describe(runner, tempdir, controller):
+def test_template_describe(runner, tempdir, template_controller):
     path = op.join(tempdir, 'params.py')
     res = runner.invoke(phy, ['template-describe', path])
     res.exit_code == 0
@@ -55,7 +43,8 @@ def test_template_describe(runner, tempdir, controller):
     # assert 'main*' in res.output
 
 
-def test_template_gui_1(qtbot, tempdir, controller):
+def test_template_gui_1(qtbot, tempdir, template_controller):
+    controller = template_controller
     gui = controller.create_gui()
     s = controller.supervisor
     gui.show()
@@ -117,8 +106,8 @@ def test_template_gui_1(qtbot, tempdir, controller):
     gui.close()
 
 
-def test_template_gui_2(qtbot, controller):
-    gui = controller.create_gui()
+def test_template_gui_2(qtbot, template_controller):
+    gui = template_controller.create_gui()
     qtbot.addWidget(gui)
     gui.show()
     qtbot.waitForWindowShown(gui)
