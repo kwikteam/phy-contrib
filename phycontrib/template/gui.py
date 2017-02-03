@@ -20,6 +20,7 @@ from phy.cluster.views import (WaveformView,
                                TraceView,
                                CorrelogramView,
                                ScatterView,
+                               ProbeView,
                                select_traces,
                                )
 from phy.cluster.views.trace import _iter_spike_waveforms
@@ -517,6 +518,16 @@ class TemplateController(EventEmitter):
                           )
         return self._add_view(gui, v)
 
+    # Probe view
+    # -------------------------------------------------------------------------
+
+    def add_probe_view(self, gui):
+        v = ProbeView(positions=self.model.channel_positions,
+                      best_channels=self.get_best_channels,
+                      )
+        v.attach(gui)
+        return v
+
     # GUI
     # -------------------------------------------------------------------------
 
@@ -538,6 +549,7 @@ class TemplateController(EventEmitter):
         self.add_correlogram_view(gui)
         if self.model.amplitudes is not None:
             self.add_amplitude_view(gui)
+        self.add_probe_view(gui)
 
         # Save the memcache when closing the GUI.
         @gui.connect_
