@@ -127,8 +127,9 @@ def test_template_gui_2(qtbot, template_controller):
     gui.close()
 
 
-def test_template_gui_sim(qtbot, controller):
+def test_template_gui_sim(qtbot, template_controller):
     """Ensure that the similarity is refreshed when clusters change."""
+    controller = template_controller
     gui = controller.create_gui()
     s = controller.supervisor
     s.cluster_view.sort_by('id', 'desc')

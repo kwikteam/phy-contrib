@@ -142,7 +142,7 @@ class BackupPlugin(IPlugin):
     def _tick(self):
         """Backup and delete old backup. Called every `delay` seconds."""
         _backup(self.dir_path)
-        _delete_old_backup(self.backup_path, self.max_n_files)
+        _delete_old_backup(self.backup_dir, self.max_n_files)
 
     def _set_timer(self, controller):
         @controller.connect

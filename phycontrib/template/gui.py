@@ -82,7 +82,7 @@ class TemplateController(EventEmitter):
         super(TemplateController, self).__init__()
         if model is None:
             assert dat_path
-            dat_path = op.realpath(dat_path)
+            dat_path = op.abspath(dat_path)
             self.model = TemplateModel(dat_path, **kwargs)
         else:
             self.model = model
