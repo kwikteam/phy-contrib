@@ -377,6 +377,13 @@ class KwikController(EventEmitter):
             self._show_all_spikes = not self._show_all_spikes
             v.set_interval(force_update=True)
 
+        @gui.connect_
+        def on_spike_click(channel_id=None, spike_id=None, cluster_id=None):
+            # Select the corresponding cluster.
+            self.supervisor.select([cluster_id])
+            # Update the trace view.
+            v.on_select([cluster_id], force_update=True)
+
         return v
 
     # Correlograms
