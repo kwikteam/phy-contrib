@@ -411,7 +411,7 @@ class TemplateController(EventEmitter):
         out.waveforms = []
 
         def gbc(cluster_id):
-            return c[self.get_best_channels(cluster_id)]
+            return self.get_best_channels(cluster_id)
 
         for b in _iter_spike_waveforms(interval=interval,
                                        traces_interval=traces_interval,

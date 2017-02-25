@@ -317,7 +317,7 @@ class KwikController(EventEmitter):
 
         def gbc(cluster_id):
             ch = self.get_best_channels(cluster_id)
-            return c[ch]
+            return ch
 
         out = Bunch(data=traces_interval)
         out.waveforms = []
