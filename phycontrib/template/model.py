@@ -40,13 +40,13 @@ def load_metadata(filename):
     dic = {}
     if not op.exists(filename):
         return dic
-    delimiter = '\t' if filename.endswith('.tsv') else ','
+    # Find whether the delimiter is tab or comma.
+    with open(filename, 'r') as f:
+        delimiter = '\t' if '\t' in f.readline() else ','
     with open(filename, 'r') as f:
         reader = csv.reader(f, delimiter=delimiter)
         # Skip the header.
-        for row in reader:
-            _, field_name = row
-            break
+        _, field_name = next(reader)
         for row in reader:
             cluster, value = row
             cluster = int(cluster)
