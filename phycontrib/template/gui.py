@@ -401,12 +401,10 @@ class TemplateController(EventEmitter):
         """Get traces and spike waveforms."""
         k = self.model.n_samples_templates
         m = self.model
-        c = m.channel_vertical_order
 
         traces_interval = select_traces(m.traces, interval,
                                         sample_rate=m.sample_rate)
         # Reorder vertically.
-        traces_interval = traces_interval[:, c]
         out = Bunch(data=traces_interval)
         out.waveforms = []
 
@@ -451,7 +449,7 @@ class TemplateController(EventEmitter):
                       n_channels=m.n_channels,
                       sample_rate=m.sample_rate,
                       duration=m.duration,
-                      channel_labels=self.model.channel_vertical_order,
+                      channel_vertical_order=m.channel_vertical_order,
                       )
         self._add_view(gui, v)
 
