@@ -12,8 +12,9 @@ import os
 import os.path as op
 import shutil
 
-from .kwik import KwikGUIPlugin, KwikController  # noqa
-from .template import TemplateGUIPlugin, TemplateController  # noqa
+from .kwik import *  # noqa
+from .template import *  # noqa
+from .views import *  # noqa
 from . import utils  # noqa
 
 logger = logging.getLogger(__name__)
