@@ -83,6 +83,9 @@ class KwikController(EventEmitter):
         self.channel_vertical_order = np.argsort(m.channel_positions[:, 1])
         self.distance_max = _get_distance_max(self.model.channel_positions)
         self.cache_dir = op.join(op.dirname(kwik_path), '.phy')
+        cg = kwargs.get('channel_group', None)
+        if cg is not None:
+            self.cache_dir = op.join(self.cache_dir, str(cg))
         self.context = Context(self.cache_dir)
         self.config_dir = config_dir
 
