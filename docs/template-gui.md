@@ -11,6 +11,7 @@ Documentation contributed by Stephen Lenzi (Margrie Lab) and Nick Steinmetz
 * [What is shown in the GUI](#gui-views)
 * [Keyboard commands](#keyboard-shortcuts)
 * [A practical guide to a typical approach to manual clustering](#user-guide)
+* [What next? Getting started with analysis](#analysis)
 * [FAQ](#FAQ)
 * [Glossary](#glossary)
 
@@ -332,10 +333,27 @@ The decision-making process will vary slightly depending on the experimental que
 
 For many applications, clusters with very few APs can be ignored (below 20). The error rate of Kilosort is very low (missed events ~1% <LINK>) and it is hard to know without good ACGs/CCGs to which cluster the events belong. The cutoff for this will vary between experiments.
 
+<a name='analysis'></a>
+## Getting started with analysis
+
+The primary files you will need for your analysis now are `spike_times.npy` and `spike_clusters.npy`, identifying the times and identities of every spike, along with `cluster_group.tsv`, which has the labels you gave to the clusters (noise/MUA/good). 
+
+If you are using Matlab, you will need the [npy-matlab repository](https://github.com/kwikteam/npy-matlab) to load these data files. You can also make use of the [spikes](https://github.com/cortex-lab/spikes) repository which has some functions you may find useful. Importantly, unlike Phy and Phy-contrib, spikes is provided "as-is" and is not guaranteed to work, nor to be stable, nor to be well-documented! But you may find parts useful, for example: 
+* [loadKSdir](https://github.com/cortex-lab/spikes/blob/master/preprocessing/phyHelpers/loadKSdir.m) - load some of the useful pieces of information from the kilosort and manual sorting results into a struct
+* [readClusterGroupsCSV](https://github.com/cortex-lab/spikes/blob/master/preprocessing/phyHelpers/readClusterGroupsCSV.m) - load the information from the cluster_group.tsv file with cluster labels
+* [getWaveForms](https://github.com/cortex-lab/spikes/blob/master/analysis/getWaveForms.m) - extract some raw waveforms out of the original data file
+* [templatesPositionsAmplitudes](https://github.com/cortex-lab/spikes/blob/master/analysis/templatePositionsAmplitudes.m) - compute some useful things about your spikes and their waveform shapes, like the position along the probe and the amplitudes
+* [psthViewer](https://github.com/cortex-lab/spikes/blob/master/visualization/psthViewer.m) - a simple GUI to quickly look at rasters and PSTHs aligned to some event, and scroll through your different clusters. 
+
 <a name="FAQ"></a>
 ## FAQ
 * I opened the GUI but don't have a waveform view or trace view. What happened?
     * These views won't show if the data file isn't found or can't be loaded. So check that your params.py has the correct path for the data file and that it is the correct file.
+
+* How can I determine the waveform shape of cluster X now that I'm done with sorting? 
+   * Phy does not save mean waveforms or waveform samples so you can't just load the answer. There are two ways to approach this. 
+      * First, you can extract the raw waveforms at the spike times of cluster X and average them (e.g. in matlab use the [getWaveForms](https://github.com/cortex-lab/spikes/blob/master/analysis/getWaveForms.m) function. More generally, memory-map the raw data file and simply read out the voltage data around the spikes times of interest). 
+      * Second, you could just take the template shape for each cluster. If there were merges, then a single cluster will have spikes from multiple templates in it, and an approximation that may be good enough (depending on your purpose) is to just take the template that is associated with the greatest number of constituent spikes. E.g. just tally up how many times each template is in cluster 961 (maybe 1200 spikes from template 897 and 100 from template 654), take the max (897) and use that template. The peak channel, the waveform width, or the amplitude of template 897 will be a close approximation of the value for cluster 961 even though cluster 961 included spikes from template 897 as well as other templates (since only similar templates are merged). A function that computes the template for each cluster according to this logic can be found [here](https://github.com/cortex-lab/spikes/blob/master/analysis/findTempForEachClu.m). 
 
 <a name="glossary"></a>
 ## Glossary
