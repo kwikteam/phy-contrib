@@ -5,6 +5,7 @@ The `phy-contrib.template-gui` module provides a graphical user interface for ma
 Documentation contributed by Stephen Lenzi (Margrie Lab) and Nick Steinmetz
 
 ## Contents:
+* [Some basic concepts](#concepts)
 * [Installation and requirements](#installation)
 * [Running the GUI](#running-gui)
 * [What is shown in the GUI](#gui-views)
@@ -13,6 +14,17 @@ Documentation contributed by Stephen Lenzi (Margrie Lab) and Nick Steinmetz
 * [FAQ](#FAQ)
 * [Glossary](#glossary)
 
+_______________
+<a name='concepts'></a>
+## Basic concepts
+
+The goal of the manual stage of spike sorting is to refine the results of the automatic stage. In general, this means three main things: 1) identifying cases where the automatic algorithm thought two groups of spikes belonged to different neurons, when really they came from the same neuron (requiring a "merge" operation); 2) identifying cases where a group of spikes was judged by the automatic algorithm to have come from one neuron, but really they came from more than one neuron (requiring a "split" operation); 3) identifying groups of spikes that the algorithm found that aren't from well-isolated neurons at all, but that are instead either "multi-unit activity" (MUA, i.e. spikes from lots of different neurons in an indistinguishable jumble) or just plain noise. 
+
+You can see that the goal here is slightly different than "come up with the truth about the data" - instead it is "improve the results of the automatic algorithm" - hopefully in the process getting close to the truth. Given that it's about doing the best you can given the algorithm, it's important to understand how the algorithm that you used worked "under the hood". This will allow you to understand the kinds of errors you see in the sorting results and how to fix them. It will also help you understand the meaning of the data files. For Kilosort, see [the NIPS paper](http://papers.nips.cc/paper/6325-fast-and-accurate-spike-sorting-of-high-channel-count-probes-with-kilosort) and [the biorxiv paper](http://www.biorxiv.org/content/early/2016/06/30/061481). It's painful to try to learn how a complicated spike sorting algorithm works, but no one said this would be easy :) 
+
+Understanding the algorithm is already necessary to understand the first thing: what exactly is a "merge" or a "split", in reality? Below we'll see how to visualize the data in a way that allows you to decide whether to merge or split, but what happens when you do this? With Kilosort, spikes are detected by comparing the raw data to the shapes of a set of "templates" - when the raw data looks close enough to the shape of one of these templates, then the time it occurred and the identity of that template are both recorded (in spike_times and spike_templates, each a vector of length num_spikes, one entry per spike). So initially, the "clusters" (i.e. groups of spikes that the we hypothesize come from a single neuron) are given by the numbers in spike_templates - all spikes for which spike_templates==674 are part of one cluster, since they all had a shape like template 674, and we can call this cluster 674. But now we want to merge 674 with another cluster that we think is the same neuron (say, cluster 255). We're not going to overwrite spike_templates (we want to keep that information, about which template each spike was detected with) so we use a different vector, spike_clusters, which is also length numSpikes. Initially spike_clusters is just identical to spike_templates. But now that we're merging 674 and 255, we're going to replace all the entries of spike_clusters for those clusters with a new number (which will just be the next highest number available, like 1001). So now `spike_clusters(spike_templates==674) = 1001;` and `spike_clusters(spike_templates==255) = 1001;` (to use matlab notation). A split works similarly. We identify with the gui (see below) that some part of the spikes from cluster 521 are from a different neuron than another part of the spikes from that cluster, so we replace all the entries of spike_clusters corresponding to cluster 521 with one of two new numbers, again picked to be the next two beyond the current highest, e.g. 1002 and 1003. So that's just `spike_clusters(members_of_first_set) = 1002` and `spike_clusters(members_of_second_set) = 1003`. You can see that after all the merges and splits you will do, the only thing that ever changes is spike_clusters. spike_templates, on the other hand, will always be the same, always representing the template shape that detected those spikes. 
+
+The other result of the manual sorting process is the labeling of each cluster as "noise", "MUA", or "good". When you make those labeling decisions, they are recorded in a second new file, called cluster_group.tsv, a tab-separated text file that just has one row per labeled cluster. So cluster_group.tsv and spike_clusters.npy are the two files you can use later to do analysis using the results of your manual sorting. 
 
 _______________
 <a name='installation'></a>
