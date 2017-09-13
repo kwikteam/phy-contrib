@@ -230,7 +230,8 @@ class TemplateModel(object):
         self.channel_positions = self._load_channel_positions()
         assert self.channel_positions.shape == (nc, 2)
 
-        self.channel_vertical_order = np.argsort(self.channel_positions[:, 1])
+        self.channel_vertical_order = np.argsort(self.channel_positions[:, 1],
+                                                 kind='mergesort')
 
         # Templates.
         self.sparse_templates = self._load_templates()
