@@ -90,15 +90,19 @@ class TemplateController(EventEmitter):
         self.context = Context(self.cache_dir)
         self.config_dir = config_dir
 
+        # Attach plugins before setting up the supervisor, so that plugins
+        # can register callbacks to events raised during setup.
+        # For example, 'request_cluster_metrics' to specify custom metrics
+        # in the cluster and similarity views.
+        attach_plugins(self, plugins=kwargs.get('plugins', None),
+                       config_dir=config_dir)
+
         self._set_cache()
         self.supervisor = self._set_supervisor()
         self.selector = self._set_selector()
         self.color_selector = ColorSelector()
 
         self._show_all_spikes = False
-
-        attach_plugins(self, plugins=kwargs.get('plugins', None),
-                       config_dir=config_dir)
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -124,13 +128,12 @@ class TemplateController(EventEmitter):
         new_cluster_id = self.context.load('new_cluster_id'). \
             get('new_cluster_id', None)
         cluster_groups = self.model.get_metadata('group')
-        supervisor = Supervisor(self.model.spike_clusters,
-                                similarity=self.similarity,
+        supervisor = Supervisor(spike_clusters=self.model.spike_clusters,
                                 cluster_groups=cluster_groups,
+                                similarity=self.similarity,
                                 new_cluster_id=new_cluster_id,
                                 context=self.context,
                                 )
-
         # Load the non-group metadata from the model to the cluster_meta.
         for name in self.model.metadata_fields:
             if name == 'group':

@@ -35,7 +35,11 @@ def runner():
 # Tests
 #------------------------------------------------------------------------------
 
-def test_template_describe(runner, tempdir, template_controller):
+def test_template_controller(template_controller):
+    assert template_controller
+
+
+def test_template_describe(qtbot, runner, tempdir, template_controller):
     path = op.join(tempdir, 'params.py')
     res = runner.invoke(phy, ['template-describe', path])
     res.exit_code == 0
@@ -54,17 +58,19 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
     tv = gui.list_views('TraceView')[0]
 
     tv.actions.go_to_next_spike()
-
     s.actions.next()
-    qtbot.wait(100)
+    #qtbot.wait(100)
+
     clu_moved = s.selected[0]
     s.actions.move_best_to_good()
     assert len(s.selected) == 1
     s.actions.next()
     clu_to_merge = s.selected
     assert len(clu_to_merge) == 2
+
     # Ensure the template feature view is updated.
-    qtbot.wait(100)
+    #qtbot.wait(100)
+
     s.actions.merge()
     clu_merged = s.selected[0]
     s.actions.move_all_to_mua()
