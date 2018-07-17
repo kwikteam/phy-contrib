@@ -29,7 +29,7 @@ from phy.io.context import Context, _cache_methods
 from phy.stats import correlograms
 from phy.stats.clusters import (get_waveform_amplitude,
                                 )
-from phy.utils import Bunch, IPlugin, EventEmitter
+from phy.utils import Bunch, IPlugin, emit, connect
 from phy.utils._color import ColorSelector
 from phy.utils.cli import _run_cmd, _add_log_file
 from phy.utils.tempdir import TemporaryDirectory
@@ -62,7 +62,7 @@ def _get_distance_max(pos):
     return np.sqrt(np.sum(pos.max(axis=0) - pos.min(axis=0)) ** 2)
 
 
-class KwikController(EventEmitter):
+class KwikController(object):
     gui_name = 'KwikGUI'
 
     n_spikes_waveforms = 100
@@ -75,7 +75,6 @@ class KwikController(EventEmitter):
     n_closest_channels = 16
 
     def __init__(self, kwik_path, config_dir=None, **kwargs):
-        super(KwikController, self).__init__()
         kwik_path = op.realpath(kwik_path)
         _backup(kwik_path)
         self.model = KwikModel(kwik_path, **kwargs)
@@ -126,8 +125,8 @@ class KwikController(EventEmitter):
                                 context=self.context,
                                 )
 
-        @supervisor.connect
-        def on_create_cluster_views():
+        @connect(sender=supervisor)
+        def on_create_cluster_views(sender):
 
             supervisor.add_column(self.get_best_channel, name='channel')
             supervisor.add_column(self.get_probe_depth, name='depth')
@@ -151,8 +150,8 @@ class KwikController(EventEmitter):
                 self.supervisor.split(spike_ids, spike_clusters)
 
         # Save.
-        @supervisor.connect
-        def on_request_save(spike_clusters, groups, *labels):
+        @connect(sender=supervisor)
+        def on_request_save(sender, spike_clusters, groups, *labels):
             """Save the modified data."""
             groups = {c: g.title() for c, g in groups.items()}
             self.model.save(spike_clusters, groups)
@@ -166,7 +165,7 @@ class KwikController(EventEmitter):
 
     def _add_view(self, gui, view):
         view.attach(gui)
-        self.emit('add_view', gui, view)
+        emit('add_view', gui, view)
         return view
 
     # Model methods
@@ -380,8 +379,8 @@ class KwikController(EventEmitter):
             self._show_all_spikes = not self._show_all_spikes
             v.set_interval(force_update=True)
 
-        @gui.connect_
-        def on_spike_click(channel_id=None, spike_id=None, cluster_id=None):
+        @connect(sender=gui)
+        def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None):
             # Select the corresponding cluster.
             self.supervisor.select([cluster_id])
             # Update the trace view.
@@ -429,11 +428,11 @@ class KwikController(EventEmitter):
         self.add_correlogram_view(gui)
 
         # Save the memcache when closing the GUI.
-        @gui.connect_
+        @connect(sender=gui)
         def on_close():
             self.context.save_memcache()
 
-        self.emit('gui_ready', gui)
+        emit('gui_ready', self, gui)
 
         return gui
 

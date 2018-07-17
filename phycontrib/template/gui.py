@@ -29,7 +29,7 @@ from phy.io.array import (Selector,
                           )
 from phy.io.context import Context, _cache_methods
 from phy.stats import correlograms
-from phy.utils import Bunch, IPlugin, EventEmitter
+from phy.utils import Bunch, IPlugin, emit, connect
 from phy.utils._color import ColorSelector
 from phy.utils._misc import _read_python
 from phy.utils.cli import _run_cmd, _add_log_file
@@ -68,7 +68,7 @@ class AmplitudeView(ScatterView):
 # Template Controller
 #------------------------------------------------------------------------------
 
-class TemplateController(EventEmitter):
+class TemplateController(object):
     gui_name = 'TemplateGUI'
 
     n_spikes_waveforms = 100
@@ -79,7 +79,6 @@ class TemplateController(EventEmitter):
     n_spikes_correlograms = 100000
 
     def __init__(self, dat_path=None, config_dir=None, model=None, **kwargs):
-        super(TemplateController, self).__init__()
         if model is None:
             assert dat_path
             dat_path = op.abspath(dat_path)
@@ -143,8 +142,8 @@ class TemplateController(EventEmitter):
                 supervisor.cluster_meta.set(name, [cluster_id], value,
                                             add_to_stack=False)
 
-        @supervisor.connect
-        def on_create_cluster_views():
+        @connect(sender=supervisor)
+        def on_create_cluster_views(sender):
             supervisor.add_column(self.get_best_channel, name='channel')
             supervisor.add_column(self.get_probe_depth, name='depth')
 
@@ -157,8 +156,8 @@ class TemplateController(EventEmitter):
                 supervisor.split(s, self.model.spike_templates[s])
 
         # Save.
-        @supervisor.connect
-        def on_request_save(spike_clusters, groups, *labels):
+        @connect(sender=supervisor)
+        def on_request_save(sender, spike_clusters, groups, *labels):
             """Save the modified data."""
             # Save the clusters.
             self.model.save_spike_clusters(spike_clusters)
@@ -175,7 +174,7 @@ class TemplateController(EventEmitter):
 
     def _add_view(self, gui, view):
         view.attach(gui)
-        self.emit('add_view', gui, view)
+        emit('add_view', self, gui, view)
         return view
 
     # Model methods
@@ -476,8 +475,8 @@ class TemplateController(EventEmitter):
             self._show_all_spikes = not self._show_all_spikes
             v.set_interval(force_update=True)
 
-        @gui.connect_
-        def on_spike_click(channel_id=None, spike_id=None, cluster_id=None):
+        @connect(sender=gui)
+        def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None):
             # Select the corresponding cluster.
             self.supervisor.select([cluster_id])
             # Update the trace view.
@@ -560,11 +559,11 @@ class TemplateController(EventEmitter):
         self.add_probe_view(gui)
 
         # Save the memcache when closing the GUI.
-        @gui.connect_
-        def on_close():
+        @connect(sender=gui)
+        def on_close(sender):
             self.context.save_memcache()
 
-        self.emit('gui_ready', gui)
+        emit('gui_ready', self, gui)
 
         return gui
 
