@@ -127,8 +127,13 @@ class TemplateController(object):
         new_cluster_id = self.context.load('new_cluster_id'). \
             get('new_cluster_id', None)
         cluster_groups = self.model.get_metadata('group')
+        cluster_metrics = {
+            'channel': self.get_best_channel,
+            'depth': self.get_probe_depth,
+        }
         supervisor = Supervisor(spike_clusters=self.model.spike_clusters,
                                 cluster_groups=cluster_groups,
+                                cluster_metrics=cluster_metrics,
                                 similarity=self.similarity,
                                 new_cluster_id=new_cluster_id,
                                 context=self.context,
@@ -143,17 +148,14 @@ class TemplateController(object):
                                             add_to_stack=False)
 
         @connect(sender=supervisor)
-        def on_create_cluster_views(sender):
-            supervisor.add_column(self.get_best_channel, name='channel')
-            supervisor.add_column(self.get_probe_depth, name='depth')
-
+        def on_attach_gui(sender):
             @supervisor.actions.add(shortcut='shift+ctrl+k')
             def split_init(cluster_ids=None):
                 """Split a cluster according to the original templates."""
                 if cluster_ids is None:
                     cluster_ids = supervisor.selected
                 s = supervisor.clustering.spikes_in_clusters(cluster_ids)
-                supervisor.split(s, self.model.spike_templates[s])
+                supervisor.actions.split(s, self.model.spike_templates[s])
 
         # Save.
         @connect(sender=supervisor)
@@ -241,7 +243,7 @@ class TemplateController(object):
                                                 )
         channel_ids = self.get_best_channels(cluster_id)
         data = self.model.get_waveforms(spike_ids, channel_ids)
-        data = data - data.mean()
+        data = data - data.mean() if data is not None else None
         return Bunch(data=data,
                      channel_ids=channel_ids,
                      channel_positions=pos[channel_ids],
@@ -475,7 +477,7 @@ class TemplateController(object):
             self._show_all_spikes = not self._show_all_spikes
             v.set_interval(force_update=True)
 
-        @connect(sender=gui)
+        @connect
         def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None):
             # Select the corresponding cluster.
             self.supervisor.select([cluster_id])

@@ -81,10 +81,11 @@ def template_model_clean(template_path):
 @fixture
 def template_controller(tempdir, template_model):
     _copy_gui_state('TemplateGUI', 'template', config_dir=tempdir)
-    plugins = ['PrecachePlugin', 'SavePrompt', 'BackupPlugin']
+    plugins = []  # ['PrecachePlugin', 'SavePrompt', 'BackupPlugin']
     c = TemplateController(model=template_model,
                            config_dir=tempdir,
                            plugins=plugins)
+
     return c
 
 

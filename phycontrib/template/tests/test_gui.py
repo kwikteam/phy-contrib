@@ -14,7 +14,9 @@ from pytest import fixture
 
 from phy.utils.cli import phy
 from phy.gui.qt import Qt
+from phy.gui.widgets import Barrier
 from phy.utils._misc import _read_python
+from phy.utils import connect
 from ..gui import TemplateController, TemplateGUIPlugin
 
 logger = logging.getLogger(__name__)
@@ -47,38 +49,62 @@ def test_template_describe(qtbot, runner, tempdir, template_controller):
     # assert 'main*' in res.output
 
 
+def _wait_controller(controller):
+    mc = controller.supervisor
+    b = Barrier()
+    connect(b('cluster_view'), event='ready', sender=mc.cluster_view)
+    connect(b('similarity_view'), event='ready', sender=mc.similarity_view)
+    b.wait()
+
+
 def test_template_gui_1(qtbot, tempdir, template_controller):
     controller = template_controller
     gui = controller.create_gui()
     s = controller.supervisor
     gui.show()
     qtbot.waitForWindowShown(gui)
+    _wait_controller(controller)
 
     wv = gui.list_views('WaveformView')[0]
     tv = gui.list_views('TraceView')[0]
 
     tv.actions.go_to_next_spike()
     s.actions.next()
-    #qtbot.wait(100)
+    s.block()
 
-    clu_moved = s.selected[0]
     s.actions.move_best_to_good()
+    s.block()
+
     assert len(s.selected) == 1
     s.actions.next()
+    s.block()
+
     clu_to_merge = s.selected
     assert len(clu_to_merge) == 2
 
-    # Ensure the template feature view is updated.
-    #qtbot.wait(100)
-
     s.actions.merge()
+    s.block()
+
     clu_merged = s.selected[0]
     s.actions.move_all_to_mua()
+    s.block()
+    qtbot.wait(100)
 
     s.actions.split_init()
+    s.block()
+    qtbot.wait(100)
+
     s.actions.next()
+    s.block()
+    qtbot.wait(100)
+
     clu = s.selected[0]
     s.actions.label('some_field', 3)
+    s.block()
+    qtbot.wait(100)
+
+    s.actions.move_all_to_good()
+    s.block()
 
     wv.actions.toggle_templates()
     wv.actions.toggle_mean_waveforms()
@@ -100,12 +126,13 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
     s = controller.supervisor
     gui.show()
     qtbot.waitForWindowShown(gui)
+    _wait_controller(controller)
 
     # Check that the data has been updated.
     assert s.get_labels('some_field')[clu - 1] is None
     assert s.get_labels('some_field')[clu] == '3'
 
-    assert s.cluster_meta.get('group', clu_moved) == 'good'
+    assert s.cluster_meta.get('group', clu) == 'good'
     for clu in clu_to_merge:
         assert clu not in s.clustering.cluster_ids
     assert clu_merged in s.clustering.cluster_ids
@@ -117,6 +144,7 @@ def test_template_gui_2(qtbot, template_controller):
     qtbot.addWidget(gui)
     gui.show()
     qtbot.waitForWindowShown(gui)
+    _wait_controller(template_controller)
 
     qtbot.keyPress(gui, Qt.Key_Down)
     qtbot.keyPress(gui, Qt.Key_Down)
@@ -135,21 +163,36 @@ def test_template_gui_2(qtbot, template_controller):
 
 def test_template_gui_sim(qtbot, template_controller):
     """Ensure that the similarity is refreshed when clusters change."""
-    controller = template_controller
-    gui = controller.create_gui()
-    s = controller.supervisor
+    gui = template_controller.create_gui()
+    s = template_controller.supervisor
+    qtbot.addWidget(gui)
+    gui.show()
+    qtbot.waitForWindowShown(gui)
+    _wait_controller(template_controller)
+
     s.cluster_view.sort_by('id', 'desc')
-    s.next()
+    s.actions.next()
+    s.block()
+
     s.similarity_view.sort_by('id', 'desc')
     cl = 63
     assert s.selected == [cl]
-    s.next()
+    s.actions.next()
+    s.block()
+
     assert s.selected == [cl, cl - 1]
-    s.next()
+    s.actions.next()
+    s.block()
+
     assert s.selected == [cl, cl - 2]
-    s.merge()
-    s.next_best()
-    s.next()
+    s.actions.merge()
+    s.block()
+
+    s.actions.next_best()
+    s.block()
+
+    s.actions.next()
+    s.block()
     assert s.selected == [cl - 1, cl + 1]
 
     gui.close()
