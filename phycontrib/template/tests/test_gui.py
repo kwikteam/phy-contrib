@@ -57,6 +57,15 @@ def _wait_controller(controller):
     b.wait()
 
 
+def test_template_gui_0(qtbot, tempdir, template_controller):
+    controller = template_controller
+    gui = controller.create_gui()
+    gui.show()
+    qtbot.waitForWindowShown(gui)
+    _wait_controller(controller)
+    # qtbot.stop()
+
+
 def test_template_gui_1(qtbot, tempdir, template_controller):
     controller = template_controller
     gui = controller.create_gui()

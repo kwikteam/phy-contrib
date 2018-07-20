@@ -143,9 +143,8 @@ class TemplateController(object):
             if name == 'group':
                 continue
             values = self.model.get_metadata(name)
-            for cluster_id, value in values.items():
-                supervisor.cluster_meta.set(name, [cluster_id], value,
-                                            add_to_stack=False)
+            d = {cluster_id: {name: value} for cluster_id, value in values.items()}
+            supervisor.cluster_meta.from_dict(d)
 
         @connect(sender=supervisor)
         def on_attach_gui(sender):
@@ -303,13 +302,13 @@ class TemplateController(object):
             if self.model.traces is None:
                 return
             v.waveforms = f if v.waveforms == g else g
-            v.on_select()
+            v.on_select(cluster_ids=v.cluster_ids)
 
         @v.actions.add(shortcut='m')
         def toggle_mean_waveforms():
             f, g = self._get_waveforms, self._get_mean_waveforms
             v.waveforms = f if v.waveforms == g else g
-            v.on_select()
+            v.on_select(cluster_ids=v.cluster_ids)
 
         return v
 

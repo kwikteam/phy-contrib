@@ -369,6 +369,8 @@ class TemplateModel(object):
 
     def _load_spike_templates(self):
         out = self._read_array('spike_templates')
+        if out.dtype in (np.float32, np.float64):
+            out = out.astype(np.int32)
         assert out.dtype in (np.uint32, np.int32, np.int64)
         return out
 
