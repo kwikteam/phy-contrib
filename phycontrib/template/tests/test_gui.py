@@ -121,6 +121,7 @@ def test_template_gui_1(qtbot, tempdir, template_controller):
     tv.actions.toggle_highlighted_spikes()
     tv.actions.go_to_next_spike()
     tv.actions.go_to_previous_spike()
+    assert s.cluster_meta.get('group', clu) == 'good'
 
     s.save()
     gui.close()
