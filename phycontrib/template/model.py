@@ -302,7 +302,8 @@ class TemplateModel(object):
         return op.join(self.dir_path, name + '.npy')
 
     def _read_array(self, name):
-        return read_array(self._get_array_path(name)).squeeze()
+        path = self._get_array_path(name)
+        return read_array(path).squeeze()
 
     def _write_array(self, name, arr):
         return write_array(self._get_array_path(name), arr)
@@ -332,7 +333,7 @@ class TemplateModel(object):
         """Save a dictionary {cluster_id: value} with cluster metadata in
         a TSV file."""
         path = op.join(self.dir_path, 'cluster_%s.tsv' % name)
-        logger.debug("Save `%s`.", path)
+        logger.debug("Save cluster metadata to `%s`.", path)
         # Remove empty values.
         save_metadata(path, name,
                       {c: v for c, v in values.items() if v is not None})
@@ -340,7 +341,7 @@ class TemplateModel(object):
     def save_spike_clusters(self, spike_clusters):
         """Save the spike clusters."""
         path = self._get_array_path('spike_clusters')
-        logger.debug("Save `%s`.", path)
+        logger.debug("Save spike clusters to `%s`.", path)
         np.save(path, spike_clusters)
 
     def _load_channel_map(self):

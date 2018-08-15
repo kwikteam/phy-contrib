@@ -170,7 +170,7 @@ class TemplateController(object):
 
     def _set_selector(self):
         def spikes_per_cluster(cluster_id):
-            return self.supervisor.clustering.spikes_per_cluster[cluster_id]
+            return self.supervisor.clustering.spikes_per_cluster.get(cluster_id, 0)
         return Selector(spikes_per_cluster)
 
     def _add_view(self, gui, view):
@@ -474,14 +474,14 @@ class TemplateController(object):
         def toggle_highlighted_spikes():
             """Toggle between showing all spikes or selected spikes."""
             self._show_all_spikes = not self._show_all_spikes
-            v.set_interval(force_update=True)
+            v.set_interval()
 
         @connect
         def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None):
             # Select the corresponding cluster.
             self.supervisor.select([cluster_id])
             # Update the trace view.
-            v.on_select([cluster_id], force_update=True)
+            v.on_select([cluster_id])
 
         return v
 
