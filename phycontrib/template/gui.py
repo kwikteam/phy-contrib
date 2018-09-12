@@ -17,7 +17,7 @@ import numpy as np
 from phy.cluster.supervisor import Supervisor
 from phy.cluster.views import (WaveformView,
                                FeatureView,
-                               TraceView,
+                               TraceView as _TraceView,
                                CorrelogramView,
                                ScatterView,
                                ProbeView,
@@ -43,6 +43,16 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 # Utils and views
 #------------------------------------------------------------------------------
+
+class TraceView(_TraceView):
+    show_all_spikes = False
+
+    @property
+    def state(self):
+        state = super(TraceView, self).state
+        state.update(show_all_spikes=self.show_all_spikes)
+        return state
+
 
 class TemplateFeatureView(ScatterView):
     _callback_delay = 100
@@ -100,8 +110,6 @@ class TemplateController(object):
         self.supervisor = self._set_supervisor()
         self.selector = self._set_selector()
         self.color_selector = ColorSelector()
-
-        self._show_all_spikes = False
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -296,7 +304,7 @@ class TemplateController(object):
 
         v.actions.separator()
 
-        @v.actions.add(shortcut='w')
+        @v.actions.add(shortcut='w', checkable=True)
         def toggle_templates():
             f, g = self._get_waveforms, self._get_template_waveforms
             if self.model.traces is None:
@@ -304,7 +312,7 @@ class TemplateController(object):
             v.waveforms = f if v.waveforms == g else g
             v.on_select(cluster_ids=v.cluster_ids)
 
-        @v.actions.add(shortcut='m')
+        @v.actions.add(shortcut='m', checkable=True)
         def toggle_mean_waveforms():
             f, g = self._get_waveforms, self._get_mean_waveforms
             v.waveforms = f if v.waveforms == g else g
@@ -400,7 +408,7 @@ class TemplateController(object):
     # Traces
     # -------------------------------------------------------------------------
 
-    def _get_traces(self, interval):
+    def _get_traces(self, interval, show_all_spikes=False):
         """Get traces and spike waveforms."""
         k = self.model.n_samples_templates
         m = self.model
@@ -421,7 +429,7 @@ class TemplateController(object):
                                        color_selector=self.color_selector,
                                        n_samples_waveforms=k,
                                        get_best_channels=gbc,
-                                       show_all_spikes=self._show_all_spikes,
+                                       show_all_spikes=show_all_spikes,
                                        ):
             i = b.spike_id
             # Compute the residual: waveform - amplitude * template.
@@ -456,6 +464,11 @@ class TemplateController(object):
                       )
         self._add_view(gui, v)
 
+        # Update the get_traces() function with show_all_spikes.
+        def get_traces(interval):
+            return self._get_traces(interval, show_all_spikes=v.show_all_spikes)
+        v.traces = get_traces
+
         v.actions.separator()
 
         @v.actions.add(shortcut='alt+pgdown')
@@ -470,10 +483,10 @@ class TemplateController(object):
 
         v.actions.separator()
 
-        @v.actions.add(shortcut='alt+s')
+        @v.actions.add(shortcut='alt+s', checkable=True, checked=v.show_all_spikes)
         def toggle_highlighted_spikes():
             """Toggle between showing all spikes or selected spikes."""
-            self._show_all_spikes = not self._show_all_spikes
+            v.show_all_spikes = not v.show_all_spikes
             v.set_interval()
 
         @connect
