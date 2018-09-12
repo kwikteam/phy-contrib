@@ -25,10 +25,12 @@ def attach_plugins(controller, plugins=None, config_dir=None):
     # Attach the plugins.
     plugins = plugins or []
     config = load_master_config(config_dir=config_dir)
-    c = config.get(controller.gui_name or controller.__class__.__name__)
+    name = controller.gui_name or controller.__class__.__name__
+    c = config.get(name)
     default_plugins = c.plugins if c else []
     if len(default_plugins):
         plugins = default_plugins + plugins
+    logger.debug("Loading %d plugins.", len(plugins))
     for plugin in plugins:
         try:
             p = get_plugin(plugin)()

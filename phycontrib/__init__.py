@@ -17,6 +17,8 @@ from .template import *  # noqa
 from .views import *  # noqa
 from . import utils  # noqa
 
+from phy import add_default_handler, DEBUG
+
 logger = logging.getLogger(__name__)
 
 
@@ -25,6 +27,9 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 
 __version__ = '1.0.15'
+
+
+add_default_handler('DEBUG' if DEBUG else 'INFO', logger=logger)
 
 
 def _copy_gui_state(gui_name, module_name, config_dir=None):
