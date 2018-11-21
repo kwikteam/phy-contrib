@@ -65,13 +65,7 @@ class TemplateFeatureView(ScatterView):
 
 
 class AmplitudeView(ScatterView):
-    def _plot_points(self, bunchs, data_bounds):
-        super(AmplitudeView, self)._plot_points(bunchs, data_bounds)
-        liney = 1.
-        self.lines(pos=[[data_bounds[0], liney, data_bounds[2], liney]],
-                   data_bounds=data_bounds,
-                   color=(1., 1., 1., .5),
-                   )
+    pass
 
 
 #------------------------------------------------------------------------------
@@ -561,15 +555,34 @@ class TemplateController(object):
         self.supervisor.attach(gui)
 
         self.add_waveform_view(gui)
+
         if self.model.traces is not None:
             self.add_trace_view(gui)
+        else:
+            logger.warning(
+                "The raw data file is not available, the trace view won't be displayed.")
+
         if self.model.features is not None:
             self.add_feature_view(gui)
+        else:
+            logger.warning(
+                "Features file is not available, the feature view won't be displayed.")
+
         if self.model.template_features is not None:
             self.add_template_feature_view(gui)
+        else:
+            logger.warning(
+                "Template feature file is not available, "
+                "the template feature view won't be displayed.")
+
         self.add_correlogram_view(gui)
+
         if self.model.amplitudes is not None:
             self.add_amplitude_view(gui)
+        else:
+            logger.warning(
+                "The amplitude file is not available, the amplitude view won't be displayed.")
+
         self.add_probe_view(gui)
 
         # Save the memcache when closing the GUI.
