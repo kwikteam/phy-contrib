@@ -136,6 +136,7 @@ class TemplateController(object):
         supervisor = Supervisor(spike_clusters=self.model.spike_clusters,
                                 cluster_groups=cluster_groups,
                                 cluster_metrics=cluster_metrics,
+                                cluster_labels=self.model.metadata,
                                 similarity=self.similarity,
                                 new_cluster_id=new_cluster_id,
                                 context=self.context,
