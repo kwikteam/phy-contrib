@@ -344,6 +344,17 @@ class TemplateModel(object):
         logger.debug("Save spike clusters to `%s`.", path)
         np.save(path, spike_clusters)
 
+    def save_mean_waveforms(self, mean_waveforms):
+        """Save the mean waveforms as a single array."""
+        path = self._get_array_path('mean_waveforms')
+        n_clusters = len(mean_waveforms)
+        out = np.zeros((n_clusters, self.n_samples_templates, self.n_channels))
+        for i, cluster_id in enumerate(sorted(mean_waveforms)):
+            b = mean_waveforms[cluster_id]
+            out[i, :, b.channel_ids] = b.data[0, ...].T
+        logger.debug("Save mean waveforms to `%s`.", path)
+        np.save(path, out)
+
     def _load_channel_map(self):
         out = self._read_array('channel_map')
         assert out.dtype in (np.uint32, np.int32, np.int64)
