@@ -84,7 +84,7 @@ If you don't have your own data, we provide some [here](#test-datasets)
 
 If you are running Phy on your own data you need to edit the params.py file in a text editor and change the parameters to match your data.  
 
-Activate your [Phy environment](https://github.com/kwikteam/phy):
+Activate your [Phy environment](https://github.com/kwikteam/phy) (on windows, omit the 'source' and just use 'activate phy'):
 
 ```sh
 $  source activate phy
