@@ -1,3 +1,5 @@
+**NOTE: this repository is archived and will be deprecated once phy 2.0 is released**
+
 # phy-contrib
 
 [![Build Status](https://img.shields.io/travis/kwikteam/phy-contrib.svg)](https://travis-ci.org/kwikteam/phy-contrib)
